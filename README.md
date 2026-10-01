@@ -1,6 +1,6 @@
 # cms-api
 
-NestJS + Prisma API for the multi-tenant CMS. Owns the database and is the only
+NestJS + TypeORM API for the multi-tenant CMS. Owns the database and is the only
 project that talks to Postgres. `cms-web` and `cms-admin` consume it over REST.
 
 ## Prerequisites
@@ -12,15 +12,16 @@ project that talks to Postgres. `cms-web` and `cms-admin` consume it over REST.
 ## Setup
 
 ```bash
-npm install                 # postinstall runs `prisma generate`
+npm install
 cp .env.example .env        # then set DATABASE_URL to your user
+npm run db:migrate          # create the tables
 npm run dev                 # watch mode
 ```
 
 `.env`:
 
 ```
-DATABASE_URL="postgresql://<your-user>@localhost:5432/cms?schema=public"
+DATABASE_URL="postgresql://<your-user>@localhost:5432/cms"
 API_PORT=4001               # canonical port is 4000; Local (WP) holds it here
 JWT_SECRET="dev-only-change-me"
 CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
@@ -38,9 +39,10 @@ CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
 | `npm run start:prod`      | run the compiled build                 |
 | `npm test` / `test:e2e`   | vitest unit / e2e (e2e needs a DB)     |
 | `npm run lint`            | oxlint                                 |
-| `npm run db:migrate`      | `prisma migrate dev`                   |
-| `npm run db:studio`       | Prisma Studio                          |
-| `npm run prisma:generate` | regenerate the Prisma client           |
+| `npm run db:migrate`      | build, run pending migrations          |
+| `npm run db:generate -- <path>` | build, generate a migration from entity changes |
+| `npm run db:revert`       | build, undo the last migration         |
+| `npm run db:show`         | list migrations and their state        |
 | `npm run db:up`/`db:down` | Postgres via `docker-compose.yml`      |
 
 ## Endpoints
@@ -50,17 +52,14 @@ CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
 
 ## Notes
 
-- Prisma 7 connects through a **driver adapter**, not a bundled engine.
-  `PrismaService` builds a `PrismaPg` adapter from `DATABASE_URL`.
-- The client generates as TypeScript into `src/generated/prisma` and is
-  gitignored; `postinstall` regenerates it after a fresh clone.
-- `prisma/schema.prisma` holds only the datasource and generator — no models
-  yet. Datasource URL is wired in `prisma7.config.ts`.
-- `PrismaModule` is `@Global`. Direct `PrismaService` use outside the repository
-  layer is discouraged: tenant scoping is enforced there by design.
+- TypeORM 1 with `pg`. Entities are in `src/database/entities/`, one per table, and
+  the migration that creates them is in `src/database/migrations/`.
+- `synchronize` is off: the schema only changes through migrations.
+- The TypeORM CLI runs against the compiled `dist/` output, which is why every
+  `db:*` script builds first.
+- Only repositories may touch the database (`DataSource`, `Repository<T>`);
+  tenant scoping is enforced there by design.
 - `docker-compose.yml` maps host port **5433** so it cannot clash with a local
   Postgres on 5432. If you use it, set
-  `DATABASE_URL="postgresql://cms:cms@localhost:5433/cms?schema=public"`.
+  `DATABASE_URL="postgresql://cms:cms@localhost:5433/cms"`.
 - Validation uses `zod` (installed); `class-validator` is deliberately absent.
-- `.agents/` holds Prisma's own agent skill docs, added by `prisma init`. Safe
-  to delete.

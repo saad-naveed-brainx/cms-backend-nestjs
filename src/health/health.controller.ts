@@ -1,15 +1,16 @@
 import { Controller, Get } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { DataSource } from 'typeorm';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  // The one non-repository consumer of the connection: it checks connectivity, never content.
+  constructor(private readonly dataSource: DataSource) {}
 
   @Get()
   async check(): Promise<{ status: string; database: string; uptime: number }> {
     let database = 'up';
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      await this.dataSource.query('SELECT 1');
     } catch {
       database = 'down';
     }
