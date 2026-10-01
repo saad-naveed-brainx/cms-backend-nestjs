@@ -38,6 +38,9 @@ reach it over REST.
   `ON DELETE SET NULL` (it would null `site_id` too), so those few links are plain keys and the API
   checks the site. See `../docs/DECISIONS.md` D-013.
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
+- **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in
+  `vitest.config.e2e.ts`. `test/support/` has `createTestApp`, `resetDatabase` (refuses non-`_test`
+  databases) and `seedTwoSites`. Files run one at a time because they share that database.
 - **`@nestjs/config` is `^12`** for Nest 12. The `^4` range belongs to Nest 10/11 and fails peer
   resolution.
 - **Runs on port 4001 locally** (`API_PORT`), because Local (the WordPress tool) holds 4000.
@@ -55,7 +58,7 @@ npm run db:generate -- src/database/migrations/Name  # build, then diff entities
 npm run db:revert                                    # build, then undo the last migration
 npm run db:show                                      # list migrations and whether each ran
 npm test                                             # vitest
-npm run test:e2e                                     # needs a running database
+npm run test:e2e                                     # API tests on <db>_test, created + migrated automatically
 ```
 
 `GET /` service info · `GET /health` status, database connectivity, uptime.

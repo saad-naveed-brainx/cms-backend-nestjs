@@ -1,0 +1,39 @@
+# Runs the same checks as `devflow-gate` on every pull request and every push to master.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cms
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # API tests derive their own database from this (cms_test) and create it themselves.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cms
+      JWT_SECRET: ci-only-not-a-secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - name: Migration applies to an empty database
+        run: npm run db:migrate
+      - name: API tests
+        run: npm run test:e2e
