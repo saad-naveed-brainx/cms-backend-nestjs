@@ -154,6 +154,23 @@ function expectPasses(run: LintRun, files: string[]): void {
   expect(run.status, `lint must pass; ${summary(run)}`).toBe(0);
 }
 
+/**
+ * Every restricted import in `file` tells the developer what to do: go through a `*.repository.ts`
+ * file, citing invariant 1 or api/CLAUDE.md. A developer reads the rule's message plus its help.
+ */
+function expectRepositoryGuidance(run: LintRun, file: string): void {
+  const problems = restrictedImports(run, file);
+  expect(
+    problems.length,
+    `no restricted-import problem on ${file}; ${summary(run)}`,
+  ).toBeGreaterThan(0);
+  for (const problem of problems) {
+    const text = `${problem.message}\n${problem.help ?? ''}`;
+    expect(text).toMatch(/repository\.ts/);
+    expect(text).toMatch(/\binvariant 1\b|CLAUDE\.md/i);
+  }
+}
+
 const ordersService = ts(
   "import { Injectable } from '@nestjs/common';",
   "import { Repository } from 'typeorm';",
@@ -480,15 +497,7 @@ describe('lint boundary: only repositories may import the raw TypeORM handles', 
     const file = 'src/orders/orders.service.ts';
     const run = lintProbe({ [file]: ordersService });
 
-    const [problem] = restrictedImports(run, file);
-    expect(
-      problem,
-      `no restricted-import problem on ${file}; ${summary(run)}`,
-    ).toBeDefined();
-    // What a developer reads: the rule's message plus the configured help text.
-    const text = `${problem.message}\n${problem.help ?? ''}`;
-    expect(text).toMatch(/repository\.ts/);
-    expect(text).toMatch(/\binvariant 1\b|CLAUDE\.md/i);
+    expectRepositoryGuidance(run, file);
   });
 
   it("[UC-SR-50] the project's own src/ and test/ pass, with the rule loaded from the real config", () => {
@@ -517,5 +526,66 @@ describe('lint boundary: only repositories may import the raw TypeORM handles', 
       `every real file that legitimately uses the TypeORM handles must be exempt; ${summary(run)}`,
     ).toEqual([]);
     expect(run.status, summary(run)).toBe(0);
+  });
+
+  // TypeORM 1.1.1's exports map includes "./*", so its internal files can be imported directly,
+  // around the ban on the root `typeorm` names.
+  const deepImports = [
+    {
+      specifier: 'typeorm/index.js',
+      source: ts(
+        "import { DataSource } from 'typeorm/index.js';",
+        '',
+        'export const isReady = (db: DataSource) => db.isInitialized;',
+      ),
+    },
+    {
+      specifier: 'typeorm/data-source/DataSource.js',
+      source: ts(
+        "import { DataSource } from 'typeorm/data-source/DataSource.js';",
+        '',
+        'export const isReady = (db: DataSource) => db.isInitialized;',
+      ),
+    },
+    {
+      specifier: 'typeorm/repository/Repository.js',
+      source: ts(
+        "import { Repository } from 'typeorm/repository/Repository.js';",
+        '',
+        'export const countAll = (repo: Repository<object>) => repo.count();',
+      ),
+    },
+    {
+      specifier: 'typeorm/entity-manager/EntityManager.js',
+      source: ts(
+        "import { EntityManager } from 'typeorm/entity-manager/EntityManager.js';",
+        '',
+        'export const countOrders = (em: EntityManager) => em.query("SELECT 1");',
+      ),
+    },
+  ];
+
+  for (const { specifier, source } of deepImports) {
+    it(`[UC-SR-55] a deep import from '${specifier}' fails the lint outside a repository, with the same guidance`, () => {
+      const file = 'src/orders/orders.service.ts';
+      const run = lintProbe({ [file]: source });
+
+      expectFlagged(run, file, [1]);
+      expectRepositoryGuidance(run, file);
+    });
+  }
+
+  it('[UC-SR-55] a repository file may use the same deep imports', () => {
+    const file = 'src/orders/orders.repository.ts';
+    const run = lintProbe({
+      [file]: ts(
+        "import { DataSource } from 'typeorm/index.js';",
+        "import { DataSource as InternalDataSource } from 'typeorm/data-source/DataSource.js';",
+        '',
+        'export const handles = [DataSource, InternalDataSource];',
+      ),
+    });
+
+    expectPasses(run, [file]);
   });
 });
