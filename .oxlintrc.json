@@ -16,6 +16,12 @@
             "name": "@nestjs/typeorm",
             "message": "Only *.repository.ts files may use TypeORM's raw database handles. Go through a repository instead (invariant 1; api/CLAUDE.md rule 2)."
           }
+        ],
+        "patterns": [
+          {
+            "group": ["typeorm/**"],
+            "message": "Import from 'typeorm' itself, not its internal files. Raw database handles belong in *.repository.ts files (invariant 1; api/CLAUDE.md rule 2)."
+          }
         ]
       }
     ]
