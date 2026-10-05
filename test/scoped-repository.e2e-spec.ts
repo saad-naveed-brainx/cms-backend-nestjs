@@ -77,6 +77,46 @@ describe('site-scoped desks for pages and page types', () => {
   const countPages = (siteId: string) =>
     dataSource.manager.count(Content, { where: { siteId }, withDeleted: true });
 
+  /** Every page and page type, trashed pages included, read past the desks. */
+  const everyRow = async () => ({
+    pages: await dataSource.manager.find(Content, {
+      withDeleted: true,
+      order: { id: 'ASC' },
+    }),
+    pageTypes: await dataSource.manager.find(ContentType, {
+      order: { id: 'ASC' },
+    }),
+  });
+
+  /**
+   * Checks a call was refused up front: it fails with the expected clear error (not a database
+   * error), returns nothing, sends no SQL at all, and leaves every stored row exactly as it was.
+   * The rows are read before the SQL spy goes in and after it comes out, so only the call's own
+   * queries are counted.
+   */
+  async function expectRefusedBeforeAnyQuery(
+    call: () => Promise<unknown>,
+    message: RegExp,
+  ): Promise<void> {
+    const rowsBefore = await everyRow();
+    const logQuery = vi.spyOn(dataSource.logger, 'logQuery');
+
+    const outcome = await call().then(
+      (resolvedWith: unknown) => ({ resolvedWith }),
+      (error: unknown) => ({ error }),
+    );
+    const sqlSent = logQuery.mock.calls.map(([sql]) => sql);
+    logQuery.mockRestore();
+
+    // On failure this shows what the call returned instead, e.g. rows from both sites.
+    expect(outcome).toEqual({ error: expect.any(Error) });
+    const { error } = outcome as { error: Error };
+    expect(error.message).toMatch(message);
+    expect(error).not.toBeInstanceOf(QueryFailedError);
+    expect(sqlSent).toEqual([]);
+    expect(await everyRow()).toEqual(rowsBefore);
+  }
+
   describe('pages desk', () => {
     let corrickType: ContentType;
     let bakeryType: ContentType;
@@ -1146,44 +1186,6 @@ describe('site-scoped desks for pages and page types', () => {
       },
     ];
 
-    /** Every page and page type, trashed pages included, read past the desks. */
-    const everyRow = async () => ({
-      pages: await dataSource.manager.find(Content, {
-        withDeleted: true,
-        order: { id: 'ASC' },
-      }),
-      pageTypes: await dataSource.manager.find(ContentType, {
-        order: { id: 'ASC' },
-      }),
-    });
-
-    /**
-     * Checks a call was stopped by the site id guard: it fails with the clear "site id is
-     * required" error (not a database error), returns no rows, sends no SQL at all, and leaves
-     * every stored row exactly as it was.
-     */
-    async function expectRefusedBeforeAnyQuery(
-      call: () => Promise<unknown>,
-    ): Promise<void> {
-      const rowsBefore = await everyRow();
-      const logQuery = vi.spyOn(dataSource.logger, 'logQuery');
-
-      const outcome = await call().then(
-        (resolvedWith: unknown) => ({ resolvedWith }),
-        (error: unknown) => ({ error }),
-      );
-      const sqlSent = logQuery.mock.calls.map(([sql]) => sql);
-      logQuery.mockRestore();
-
-      // On failure this shows what the call returned instead, e.g. rows from both sites.
-      expect(outcome).toEqual({ error: expect.any(Error) });
-      const { error } = outcome as { error: Error };
-      expect(error.message).toMatch(/site id is required/i);
-      expect(error).not.toBeInstanceOf(QueryFailedError);
-      expect(sqlSent).toEqual([]);
-      expect(await everyRow()).toEqual(rowsBefore);
-    }
-
     const missingSiteIds = [
       { label: 'undefined', siteId: undefined },
       { label: 'null', siteId: null },
@@ -1192,7 +1194,10 @@ describe('site-scoped desks for pages and page types', () => {
     for (const { label, siteId } of missingSiteIds) {
       for (const { method, call } of deskCalls) {
         it(`[UC-SR-28] ${method} refuses a siteId of ${label} before any query, returning and changing nothing`, async () => {
-          await expectRefusedBeforeAnyQuery(() => call(siteId));
+          await expectRefusedBeforeAnyQuery(
+            () => call(siteId),
+            /site id is required/i,
+          );
         });
       }
     }
@@ -1200,9 +1205,107 @@ describe('site-scoped desks for pages and page types', () => {
     for (const siteId of ['abc', '1']) {
       for (const { method, call } of deskCalls) {
         it(`[UC-SR-29] ${method} refuses the malformed siteId '${siteId}' with the same clear error, not a database 22P02`, async () => {
-          await expectRefusedBeforeAnyQuery(() => call(siteId));
+          await expectRefusedBeforeAnyQuery(
+            () => call(siteId),
+            /site id is required/i,
+          );
         });
       }
+    }
+  });
+
+  describe('either desk, given a system-managed field in an update', () => {
+    /** Neither row's own date, so writing it would show. */
+    const OTHER_DATE = new Date('2025-06-01T00:00:00.000Z');
+    let about: Content;
+    let event: ContentType;
+
+    beforeEach(async () => {
+      const pageType = await seedContentType(dataSource, { siteId: corrick });
+      about = await seedPage(dataSource, {
+        siteId: corrick,
+        contentTypeId: pageType.id,
+        title: 'About',
+        slug: 'about',
+        path: '/about',
+        createdAt: LONG_AGO,
+        updatedAt: LONG_AGO,
+      });
+      event = await seedContentType(dataSource, {
+        siteId: corrick,
+        name: 'Event',
+        slug: 'event',
+        createdAt: LONG_AGO,
+        updatedAt: LONG_AGO,
+      });
+    });
+
+    /**
+     * Each patch carries a field the system owns: the trash date (trashing gets its own
+     * operation in CNT-11) or a timestamp (TypeORM sets those). Cast past the types, which refuse
+     * them too (test/scoped-repository-types.spec.ts). A plain update that wrote `deletedAt`
+     * would trash the page and then answer `null`, as if nothing had been written.
+     */
+    const systemFieldPatches: {
+      patch: string;
+      call: () => Promise<unknown>;
+    }[] = [
+      {
+        patch: 'pages.update({ deletedAt })',
+        call: async () =>
+          pages.update(corrick, about.id, { deletedAt: new Date() } as never),
+      },
+      {
+        patch: 'pages.update({ createdAt })',
+        call: async () =>
+          pages.update(corrick, about.id, { createdAt: OTHER_DATE } as never),
+      },
+      {
+        patch: 'pages.update({ updatedAt })',
+        call: async () =>
+          pages.update(corrick, about.id, { updatedAt: OTHER_DATE } as never),
+      },
+      {
+        patch: 'pages.update({ title, deletedAt })',
+        call: async () =>
+          pages.update(corrick, about.id, {
+            title: 'About us',
+            deletedAt: new Date(),
+          } as never),
+      },
+      {
+        patch: 'pageTypes.update({ createdAt })',
+        call: async () =>
+          pageTypes.update(corrick, event.id, {
+            createdAt: OTHER_DATE,
+          } as never),
+      },
+      {
+        patch: 'pageTypes.update({ updatedAt })',
+        call: async () =>
+          pageTypes.update(corrick, event.id, {
+            updatedAt: OTHER_DATE,
+          } as never),
+      },
+    ];
+
+    for (const { patch, call } of systemFieldPatches) {
+      it(`[UC-SR-56] ${patch} is refused as managed by the system, before any query, writing nothing`, async () => {
+        await expectRefusedBeforeAnyQuery(call, /managed by the system/i);
+
+        // About is still live, and both rows keep their own timestamps.
+        expect(await storedPage(about.id)).toMatchObject({
+          title: 'About',
+          deletedAt: null,
+          createdAt: LONG_AGO,
+          updatedAt: LONG_AGO,
+        });
+        expect(
+          await dataSource.manager.findOneByOrFail(ContentType, {
+            id: event.id,
+          }),
+        ).toMatchObject({ createdAt: LONG_AGO, updatedAt: LONG_AGO });
+      });
     }
   });
 });

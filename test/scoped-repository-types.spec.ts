@@ -111,9 +111,44 @@ async function callsThatMustNotCompile(
   await pageTypes.update(siteId, id, { name: 'Events', id });
 }
 
+/**
+ * UC-SR-56, never called, same rules as above: the trash date and the timestamps are managed by
+ * the system, so no update patch may carry them. Trashing gets its own operation (CNT-11), and
+ * TypeORM sets `createdAt` and `updatedAt`.
+ */
+async function systemFieldPatchesThatMustNotCompile(
+  pages: ContentRepository,
+  pageTypes: ContentTypeRepository,
+  siteId: string,
+  id: string,
+): Promise<void> {
+  const when = new Date();
+
+  await pages.update(siteId, id, { title: 'About us' });
+  // @ts-expect-error -- UC-SR-56: deletedAt, trashing is its own operation
+  await pages.update(siteId, id, { deletedAt: when });
+  // @ts-expect-error -- UC-SR-56: createdAt
+  await pages.update(siteId, id, { createdAt: when });
+  // @ts-expect-error -- UC-SR-56: updatedAt
+  await pages.update(siteId, id, { updatedAt: when });
+  // @ts-expect-error -- UC-SR-56: deletedAt, even next to an allowed field
+  await pages.update(siteId, id, { title: 'About us', deletedAt: when });
+
+  await pageTypes.update(siteId, id, { name: 'Events' });
+  // @ts-expect-error -- UC-SR-56: createdAt
+  await pageTypes.update(siteId, id, { createdAt: when });
+  // @ts-expect-error -- UC-SR-56: updatedAt
+  await pageTypes.update(siteId, id, { updatedAt: when });
+}
+
 describe('desk method signatures', () => {
   it('[UC-SR-41] a call without a site id, an address change through update, or an OR-array filter does not compile', () => {
     // The real assertions are the @ts-expect-error lines above, checked by `npm run typecheck`.
     expect(callsThatMustNotCompile).toBeTypeOf('function');
+  });
+
+  it('[UC-SR-56] an update patch carrying deletedAt, createdAt or updatedAt does not compile', () => {
+    // The real assertions are the @ts-expect-error lines above, checked by `npm run typecheck`.
+    expect(systemFieldPatchesThatMustNotCompile).toBeTypeOf('function');
   });
 });
