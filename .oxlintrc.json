@@ -2,9 +2,39 @@
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/crates/oxc_linter/src/rules.rs",
   "rules": {
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-floating-promises": "warn"
+    "@typescript-eslint/no-floating-promises": "warn",
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "typeorm",
+            "importNames": ["DataSource", "EntityManager", "Repository", "default"],
+            "message": "Only *.repository.ts files may use TypeORM's raw database handles. Go through a repository instead (invariant 1; api/CLAUDE.md rule 2)."
+          },
+          {
+            "name": "@nestjs/typeorm",
+            "message": "Only *.repository.ts files may use TypeORM's raw database handles. Go through a repository instead (invariant 1; api/CLAUDE.md rule 2)."
+          }
+        ]
+      }
+    ]
   },
   "env": {
     "node": true
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/**/*.repository.ts",
+        "src/health/health.controller.ts",
+        "src/database/database.module.ts",
+        "src/database/data-source.ts",
+        "test/**"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
 }
