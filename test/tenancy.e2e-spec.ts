@@ -23,7 +23,7 @@ describe('tenant isolation in the database', () => {
     await app.close();
   });
 
-  it('lets a user hold a role that belongs to the same site', async () => {
+  it('[UC-SR-52] lets a user hold a role that belongs to the same site', async () => {
     const m = dataSource.manager;
     await m.save(
       m.create(SiteMember, {
@@ -38,7 +38,7 @@ describe('tenant isolation in the database', () => {
     );
   });
 
-  it("refuses to give a Corrick member one of Bakery's roles", async () => {
+  it("[UC-SR-52] refuses to give a Corrick member one of Bakery's roles", async () => {
     const m = dataSource.manager;
     const crossSite = m.create(SiteMember, {
       siteId: data.corrick.site.id,

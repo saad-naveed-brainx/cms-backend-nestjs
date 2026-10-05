@@ -13,7 +13,7 @@ describe('GET /health', () => {
     await app.close();
   });
 
-  it('reports the API and its database as up', async () => {
+  it('[UC-SR-51] reports the API and its database as up', async () => {
     const res = await request(app.getHttpServer()).get('/health').expect(200);
 
     expect(res.body).toMatchObject({ status: 'ok', database: 'up' });
