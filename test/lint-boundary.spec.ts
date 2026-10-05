@@ -262,6 +262,44 @@ describe('lint boundary: only repositories may import the raw TypeORM handles', 
     expectFlagged(run, file, [1]);
   });
 
+  // TypeORM 1.1.1 also exports everything as one default object, so without this
+  // `typeorm.DataSource` would slip past the ban on the named imports.
+  const defaultImports = [
+    {
+      form: "a default import `import typeorm from 'typeorm'`",
+      source: ts(
+        "import typeorm from 'typeorm';",
+        '',
+        'export const isConnection = (value: unknown) => value instanceof typeorm.DataSource;',
+      ),
+    },
+    {
+      form: 'a default import spelled `import { default as typeorm }`',
+      source: ts(
+        "import { default as typeorm } from 'typeorm';",
+        '',
+        'export const isConnection = (value: unknown) => value instanceof typeorm.DataSource;',
+      ),
+    },
+    {
+      form: 'a default import beside allowed names, `import typeorm, { Column }`',
+      source: ts(
+        "import typeorm, { Column } from 'typeorm';",
+        '',
+        'export const parts = [Column, typeorm.DataSource];',
+      ),
+    },
+  ];
+
+  for (const { form, source } of defaultImports) {
+    it(`[UC-SR-44] ${form} fails the lint outside a repository`, () => {
+      const file = 'src/orders/orders.service.ts';
+      const run = lintProbe({ [file]: source });
+
+      expectFlagged(run, file, [1]);
+    });
+  }
+
   const nestTypeormImports = [
     {
       name: 'InjectRepository',
