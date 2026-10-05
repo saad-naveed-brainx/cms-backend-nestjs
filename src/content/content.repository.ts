@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, IsNull, Not } from 'typeorm';
 import { Content } from '../database/entities/index.js';
-import { ScopedRepository, type Patch } from '../database/scoped.repository.js';
+import {
+  ScopedRepository,
+  type Forbidden,
+  type Patch,
+} from '../database/scoped.repository.js';
 
 /**
  * A page's address. Changing any of these must recompute the `path` of every descendant in one
@@ -11,10 +15,9 @@ import { ScopedRepository, type Patch } from '../database/scoped.repository.js';
 const ADDRESS_FIELDS = ['slug', 'path', 'parentId'] as const;
 type AddressField = (typeof ADDRESS_FIELDS)[number];
 
-/** A page update: any field except `id`, `siteId` and the address fields. */
-export type PagePatch = Omit<Patch<Content>, AddressField> & {
-  [K in AddressField]?: never;
-};
+/** A page update: any field except `id`, `siteId`, the system's dates and the address fields. */
+export type PagePatch = Omit<Patch<Content>, AddressField> &
+  Forbidden<AddressField>;
 
 /**
  * The pages desk: every page, post and custom-type item (`content`), one site at a time.
@@ -45,7 +48,8 @@ export class ContentRepository extends ScopedRepository<
 
   /**
    * The base `update` without the address fields: a patch carrying `slug`, `path` or `parentId`
-   * is refused before anything is written, even when cast past the types.
+   * is refused before anything is written, even when cast past the types. This check runs first,
+   * then the base's own checks.
    */
   override async update(
     siteId: string,

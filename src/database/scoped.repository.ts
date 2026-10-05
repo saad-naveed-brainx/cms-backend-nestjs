@@ -14,14 +14,21 @@ type SiteRow = { id: string; siteId: string; createdAt: Date };
 /** `id` is assigned on insert and `siteId` comes from the argument: a caller sets neither. */
 type ScopeKey = 'id' | 'siteId';
 
-/** Refuses `id` and `siteId` even in a non-literal object, which excess-property checks miss. */
-type NoScopeKeys = { [K in ScopeKey]?: never };
+/**
+ * Dates the system keeps: TypeORM sets `createdAt` and `updatedAt`, and the trash date belongs
+ * to the trash operation (CNT-11). An update may not set them (UC-SR-56).
+ */
+type SystemKey = 'createdAt' | 'updatedAt' | 'deletedAt';
+
+/** Refuses these keys even in a non-literal object, which excess-property checks miss. */
+export type Forbidden<K extends PropertyKey> = { [P in K]?: never };
 
 /**
  * A `findMany` filter. One object, never an OR-array: each branch of an OR would need its own
  * site condition. No `id` (that is `findById`) and no `siteId` (that is the first argument).
  */
-export type Filter<E> = Omit<FindOptionsWhere<E>, ScopeKey> & NoScopeKeys;
+export type Filter<E> = Omit<FindOptionsWhere<E>, ScopeKey> &
+  Forbidden<ScopeKey>;
 
 /** Properties whose type allows `null`: nullable columns, which a new row may leave out. */
 type NullableKey<E> = {
@@ -40,10 +47,11 @@ export type NewRow<E, Defaulted extends keyof E = never> = Omit<
   ScopeKey | OptionalKey<E, Defaulted>
 > &
   Partial<Pick<E, OptionalKey<E, Defaulted>>> &
-  NoScopeKeys;
+  Forbidden<ScopeKey>;
 
-/** An `update` patch: any of the row's fields except `id` and `siteId`. */
-export type Patch<E> = Partial<Omit<E, ScopeKey>> & NoScopeKeys;
+/** An `update` patch: any of the row's fields except `id`, `siteId` and the system's dates. */
+export type Patch<E> = Partial<Omit<E, ScopeKey | SystemKey>> &
+  Forbidden<ScopeKey | SystemKey>;
 
 /** TypeORM's `QueryDeepPartialEntity`, which the package root does not export. */
 type UpdateValues<E extends SiteRow> = Parameters<Repository<E>['update']>[1];
@@ -96,6 +104,7 @@ function writableFields(fields: object): Record<string, unknown> {
  * - A missing or malformed site id is refused before any SQL is sent.
  * - Another site's row is `null`, exactly like a row that does not exist.
  * - Trashed rows (entities with a `@DeleteDateColumn`) are hidden from every read and write here.
+ * - An update cannot set the system's dates: the timestamps or the trash date (UC-SR-56).
  *
  * The TypeORM repository stays private, so a desk offers only scoped methods and nothing can
  * call an unscoped `find()` through it. No `delete` and no pagination, on purpose (plan D3):
@@ -140,9 +149,13 @@ export abstract class ScopedRepository<
    * Changes the given fields of one of the site's rows and returns the row as stored. `null`,
    * with nothing written, for an unknown, malformed, trashed or other-site id. An empty patch
    * writes nothing, so `updatedAt` stays as it was.
+   *
+   * Checked before any SQL, in this order: the site id, then the system's dates (a patch setting
+   * one is refused whole), then the id.
    */
   async update(siteId: string, id: string, patch: Patch<E>): Promise<E | null> {
     requireSiteId(siteId);
+    this.refuseSystemFields(patch);
     if (!isUuid(id)) return null;
     const changes = writableFields(patch);
     if (Object.keys(changes).length === 0) return this.findById(siteId, id);
@@ -189,8 +202,32 @@ export abstract class ScopedRepository<
   /** What a write targets: this id, on this site, and not in the trash. */
   private liveRow(siteId: string, id: string): FindOptionsWhere<E> {
     const where: Record<string, unknown> = { id };
-    const trashed = this.repository.metadata.deleteDateColumn;
-    if (trashed) where[trashed.propertyName] = IsNull();
+    const trash = this.trashField();
+    if (trash) where[trash] = IsNull();
     return this.onSite(siteId, where as FindOptionsWhere<E>);
+  }
+
+  /**
+   * Refuses a patch that sets one of the system's dates: TypeORM keeps `createdAt` and
+   * `updatedAt`, and only the trash operation (CNT-11) may set the trash date. Without this, an
+   * update setting `deletedAt` would trash the row and then answer `null`, as if nothing changed.
+   */
+  private refuseSystemFields(patch: object): void {
+    const trash = this.trashField();
+    const managed = ['createdAt', 'updatedAt', ...(trash ? [trash] : [])];
+    const touched = managed.filter(
+      (field) => (patch as Record<string, unknown>)[field] !== undefined,
+    );
+    if (touched.length > 0) {
+      throw new Error(
+        `Update cannot set ${touched.join(', ')}: managed by the system. TypeORM keeps the ` +
+          `timestamps, and trash gets its own operation (CNT-11)`,
+      );
+    }
+  }
+
+  /** The trash date's property (`deletedAt`), for entities that have a trash. */
+  private trashField(): string | undefined {
+    return this.repository.metadata.deleteDateColumn?.propertyName;
   }
 }
