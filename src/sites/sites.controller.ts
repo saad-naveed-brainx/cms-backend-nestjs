@@ -5,6 +5,7 @@ import {
   NotFoundException,
   Query,
 } from '@nestjs/common';
+import { Public } from '../auth/decorators.js';
 import {
   InvalidHostError,
   SiteResolver,
@@ -20,6 +21,7 @@ export class SitesController {
    * comes from the address, never from a `siteId` parameter. A missing, repeated (`host=a&host=b`
    * arrives as an array) or malformed host is a 400, decided before any database call.
    */
+  @Public()
   @Get('resolve')
   async resolve(@Query('host') host: unknown): Promise<ResolvedHost> {
     let resolved: ResolvedHost | null;
