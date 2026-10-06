@@ -16,7 +16,7 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('[UC-SR-53] / (GET)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)

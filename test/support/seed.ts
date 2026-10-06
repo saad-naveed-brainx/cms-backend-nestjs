@@ -3,6 +3,7 @@ import { Permission } from '../../src/auth/permission.js';
 import {
   Content,
   ContentType,
+  Hostname,
   Organization,
   Role,
   Site,
@@ -93,4 +94,18 @@ export async function seedTrashedPage(
   fields: PageSeed,
 ): Promise<Content> {
   return seedPage(dataSource, { deletedAt: new Date(), ...fields });
+}
+
+/**
+ * A web address a site answers on, written straight to the table, past the platform desk. The
+ * table refuses anything but lower-case, and a site can have only one primary address.
+ */
+export async function seedHostname(
+  dataSource: DataSource,
+  siteId: string,
+  hostname: string,
+  isPrimary = false,
+): Promise<Hostname> {
+  const m = dataSource.manager;
+  return m.save(m.create(Hostname, { siteId, hostname, isPrimary }));
 }

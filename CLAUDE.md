@@ -39,6 +39,10 @@ reach it over REST.
   columns; same-site references are composite `(site_id, x_id)` keys. A composite key cannot use
   `ON DELETE SET NULL` (it would null `site_id` too), so those few links are plain keys and the API
   checks the site. See `../docs/DECISIONS.md` D-013.
+- **Desks extend `ScopedRepository`**, so every method takes `siteId` first. `PlatformRepository` is
+  the only unscoped desk: it extends nothing and is limited to `sites`, `hostnames` and `users`
+  (host → site, email → user). A desk method that needs an all-or-nothing save opens its own
+  transaction; no transaction object leaves the desk (`../docs/DECISIONS.md` D-015).
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
 - **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in
   `vitest.config.e2e.ts`. `test/support/` has `createTestApp`, `resetDatabase` (refuses non-`_test`
