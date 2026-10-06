@@ -93,11 +93,15 @@ export class SiteResolver {
   }
 
   /**
-   * Forgets every address of one site. Call it once the change is saved: a lookup that starts
-   * before then reads the old row.
+   * Forgets every address of one site, and every remembered "unknown" address too. The change may
+   * be a newly added address, and that address may be remembered as unknown for the next 30
+   * seconds. A "no site" entry names no site, so it cannot be matched to this one: all go, at the
+   * price of a few extra lookups. Call it once the change is saved: a lookup that starts before
+   * then reads the old row.
    */
   invalidateSite(siteId: string): void {
     this.cache.deleteWhere((resolved) => resolved.site.id === siteId);
+    this.cache.deleteNegatives();
     this.forgetRunning();
   }
 

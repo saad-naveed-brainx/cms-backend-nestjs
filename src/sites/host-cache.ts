@@ -57,17 +57,26 @@ export class HostCache<V> {
 
   /** Drops every site the predicate matches and returns how many. "No site" entries never match. */
   deleteWhere(predicate: (value: V) => boolean): number {
+    return this.dropMatching((value) => value !== null && predicate(value));
+  }
+
+  /** Drops every remembered "no site here" entry and returns how many. */
+  deleteNegatives(): number {
+    return this.dropMatching((value) => value === null);
+  }
+
+  clear(): void {
+    this.entries.clear();
+  }
+
+  private dropMatching(matches: (value: V | null) => boolean): number {
     let dropped = 0;
     for (const [key, entry] of this.entries) {
-      if (entry.value !== null && predicate(entry.value)) {
+      if (matches(entry.value)) {
         this.entries.delete(key);
         dropped += 1;
       }
     }
     return dropped;
-  }
-
-  clear(): void {
-    this.entries.clear();
   }
 }
