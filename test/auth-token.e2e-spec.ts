@@ -23,6 +23,9 @@ describe('GET /auth/me and the token guard', () => {
 
   beforeAll(async () => {
     ({ app, dataSource } = await createTestApp());
+    // Listening on a loopback port keeps supertest from opening and closing a listener of its own around
+    // each request: with several requests in a row that race sometimes ends in "socket hang up".
+    await app.listen(0, '127.0.0.1');
   });
 
   beforeEach(async () => {
