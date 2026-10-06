@@ -107,9 +107,9 @@ export class SiteResolver {
   }
 
   /**
-   * Every invalidation ends here. A running lookup may carry old data, and its site is not known
-   * until it finishes, so all of them are dropped: callers arriving later start a fresh lookup
-   * instead of joining one that is stale.
+   * Every invalidation ends here. It bumps the generation, so a running lookup's answer is not
+   * stored, and forgets the running lookups, so callers arriving later start a fresh one instead of
+   * joining a stale one. All of them, because a lookup's site is not known until it finishes.
    */
   private forgetRunning(): void {
     this.generation += 1;
