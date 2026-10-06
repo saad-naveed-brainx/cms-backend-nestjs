@@ -10,9 +10,11 @@ reach it over REST.
 
 1. Every content read/write goes through a repository, and every content method takes `siteId` as a
    **required** parameter. An unscoped method must not exist.
-2. Nothing outside `src/*/*.repository.ts` injects `DataSource`, `EntityManager` or `Repository<T>`
-   (`@InjectRepository`), and `TypeOrmModule.forFeature` is only imported for repositories. The
-   health check is the one exception. Not yet lint-enforced (`../docs/BACKLOG.md` B-12).
+2. Nothing outside `src/**/*.repository.ts` imports `DataSource`, `EntityManager`, `Repository` or
+   the default export from `typeorm`, a deep `typeorm/...` path, or anything from `@nestjs/typeorm`,
+   except the health check, `database.module.ts`, `data-source.ts` and `test/**`. Lint-enforced by
+   `.oxlintrc.json` (`no-restricted-imports`, B-12). Repositories inject `DataSource` and call
+   `getRepository()`, with no `TypeOrmModule.forFeature` (`../docs/DECISIONS.md` D-015).
 3. `synchronize` stays off. Every schema change is a migration.
 4. HTML is sanitised **on write**. Never sanitise on read.
 5. Validation is Zod. `class-validator` is deliberately not installed.
