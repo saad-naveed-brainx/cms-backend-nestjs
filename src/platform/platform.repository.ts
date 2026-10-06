@@ -21,7 +21,7 @@ import { Hostname, Site, User } from '../database/entities/index.js';
  * - Each lookup lower-cases its input and does nothing else: no trimming, no port stripping, no
  *   `www.` fallback. The tables store lower case, and tidying a raw Host header is FND-04's job.
  *   The match is exact, never a pattern, and values are always bound parameters.
- * - It holds no state between calls. FND-04 adds the host-to-site cache, outside this class.
+ * - It keeps no state between calls and caches nothing: host-to-site caching is FND-04's.
  */
 @Injectable()
 export class PlatformRepository {
