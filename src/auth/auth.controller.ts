@@ -8,11 +8,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { z } from 'zod';
-import {
-  AuthService,
-  type LoginResult,
-  type Membership,
-} from './auth.service.js';
+import { AuthService, type LoginResult, type Profile } from './auth.service.js';
 import { CurrentUser, Public, type AuthUser } from './decorators.js';
 
 /**
@@ -55,10 +51,7 @@ export class AuthController {
    * are now). A token for a user who no longer exists is a 401.
    */
   @Get('me')
-  async me(@CurrentUser() current: AuthUser): Promise<{
-    user: { id: string; email: string; name: string };
-    memberships: Membership[];
-  }> {
+  async me(@CurrentUser() current: AuthUser): Promise<Profile> {
     const profile = await this.auth.profile(current.id);
     if (!profile) throw new UnauthorizedException();
     return profile;

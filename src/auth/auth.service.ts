@@ -13,6 +13,9 @@ export type Membership = {
 
 type PublicUser = { id: string; email: string; name: string };
 
+/** What `/auth/me` answers: who the token belongs to, as the database has it now. */
+export type Profile = { user: PublicUser; memberships: Membership[] };
+
 export type LoginResult = {
   accessToken: string;
   tokenType: 'Bearer';
@@ -61,9 +64,7 @@ export class AuthService {
   }
 
   /** The user's current details and memberships, or `null` when the user no longer exists. */
-  async profile(
-    userId: string,
-  ): Promise<{ user: PublicUser; memberships: Membership[] } | null> {
+  async profile(userId: string): Promise<Profile | null> {
     const user = await this.platform.findUserById(userId);
     if (!user) return null;
     return {
