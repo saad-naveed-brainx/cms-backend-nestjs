@@ -6,6 +6,7 @@ import { ContentTypesModule } from './content-types/content-types.module.js';
 import { ContentModule } from './content/content.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
+import { PlatformModule } from './platform/platform.module.js';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { HealthModule } from './health/health.module.js';
     HealthModule,
     ContentModule,
     ContentTypesModule,
+    PlatformModule,
   ],
   controllers: [AppController],
   providers: [AppService],
