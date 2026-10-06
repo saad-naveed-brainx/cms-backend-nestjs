@@ -24,7 +24,7 @@ describe('the platform desk', () => {
     ]);
   });
 
-  it('[UC-SR-26] extends no base class, the scoped one included, so it inherits nothing beyond its two lookups', () => {
+  it('[UC-SR-26] extends no base class, the scoped one included, so it inherits nothing beyond its own methods', () => {
     // A base class would bring its own methods (findById, create, update) that the list above
     // cannot see. The scoped base is for site-owned rows; this desk is deliberately not one.
     expect(Object.getPrototypeOf(PlatformRepository.prototype)).toBe(
