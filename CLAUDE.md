@@ -18,7 +18,8 @@ reach it over REST.
 3. `synchronize` stays off. Every schema change is a migration.
 4. HTML is sanitised **on write**. Never sanitise on read.
 5. Validation is Zod. `class-validator` is deliberately not installed.
-6. `siteId` comes from the authenticated request, never from a request body.
+6. `siteId` comes from the authenticated request, never from a request body. `@CurrentSite()` is where
+   this comes from: the `X-Site-Id` header, checked against membership on every request (decision D-018).
 7. The two invariant tests (cross-tenant read denial, recursive path recomputation) must stay green.
    A red invariant test stops other work.
 
@@ -41,13 +42,18 @@ reach it over REST.
   checks the site. See `../docs/DECISIONS.md` D-013.
 - **Desks extend `ScopedRepository`**, so every method takes `siteId` first. `PlatformRepository` is
   the only unscoped desk: it extends nothing and is limited to `sites`, `hostnames` and `users`
-  (host → site, email → user). A desk method that needs an all-or-nothing save opens its own
-  transaction; no transaction object leaves the desk (`../docs/DECISIONS.md` D-015).
+  (host → site, email or id → user, user → their memberships). A desk method that needs an
+  all-or-nothing save opens its own transaction; no transaction object leaves the desk
+  (`../docs/DECISIONS.md` D-015).
 - **Code that changes a site's addresses, name, theme or settings must call `SiteResolver.invalidateSite(siteId)`**
   (`src/sites/`), or visitors can see the old data for up to 60 seconds. It also forgets remembered
   "unknown" addresses, so a newly added address works at once (no `invalidateHost` call needed). Hook
   shipped first, callers come later (`../docs/features/host-resolution/PLAN.md` D6,
   `../docs/DECISIONS.md` D-017).
+- **Every route needs a token unless it is marked `@Public()`** (global guard, `src/auth/`). A site-scoped route
+  (`@SiteScoped()`, `@RequirePermission(...)`) also needs the `X-Site-Id` header. Permissions are looked up per
+  request, not read from the token. `JWT_SECRET` must be set (32+ characters in production); the test configs set
+  their own, and `JWT_EXPIRES_IN` defaults to `7d` (`../docs/DECISIONS.md` D-018).
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
 - **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in
   `vitest.config.e2e.ts`. `test/support/` has `createTestApp`, `resetDatabase` (refuses non-`_test`

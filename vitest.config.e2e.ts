@@ -16,7 +16,12 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
-    env: { DATABASE_URL: databaseUrl },
+    env: {
+      DATABASE_URL: databaseUrl,
+      // The app will not start without a signing secret; CI has no env file to supply one.
+      JWT_SECRET:
+        process.env.JWT_SECRET ?? 'test-only-jwt-secret-0123456789abcdef',
+    },
     globalSetup: ['./test/support/global-setup.ts'],
     // One shared test database: run files one at a time so resets don't race.
     fileParallelism: false,
