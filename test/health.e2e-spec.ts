@@ -20,7 +20,7 @@ describe('GET /health', () => {
     expect(res.body.uptime).toEqual(expect.any(Number));
   });
 
-  it('answers an unknown URL with a 404 JSON error, not a crash', async () => {
+  it('[UC-SR-53] answers an unknown URL with a 404 JSON error, not a crash', async () => {
     const res = await request(app.getHttpServer())
       .get('/no-such-endpoint')
       .expect(404);
