@@ -6,7 +6,9 @@ import { ContentTypesModule } from './content-types/content-types.module.js';
 import { ContentModule } from './content/content.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
+import { HostnamesModule } from './hostnames/hostnames.module.js';
 import { PlatformModule } from './platform/platform.module.js';
+import { SitesModule } from './sites/sites.module.js';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { PlatformModule } from './platform/platform.module.js';
     ContentModule,
     ContentTypesModule,
     PlatformModule,
+    HostnamesModule,
+    SitesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
