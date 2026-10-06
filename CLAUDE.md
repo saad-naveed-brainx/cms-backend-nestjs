@@ -43,6 +43,9 @@ reach it over REST.
   the only unscoped desk: it extends nothing and is limited to `sites`, `hostnames` and `users`
   (host → site, email → user). A desk method that needs an all-or-nothing save opens its own
   transaction; no transaction object leaves the desk (`../docs/DECISIONS.md` D-015).
+- **Code that changes a site's addresses, name, theme or settings must call `SiteResolver.invalidateSite(siteId)`**
+  (`src/sites/`), or visitors can see the old data for up to 60 seconds. Hook shipped first, callers come
+  later (`../docs/features/host-resolution/PLAN.md` D6, `../docs/DECISIONS.md` D-017).
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
 - **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in
   `vitest.config.e2e.ts`. `test/support/` has `createTestApp`, `resetDatabase` (refuses non-`_test`
