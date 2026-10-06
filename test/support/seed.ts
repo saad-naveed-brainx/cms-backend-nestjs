@@ -1,6 +1,8 @@
 import type { DataSource } from 'typeorm';
 import { Permission } from '../../src/auth/permission.js';
 import {
+  Content,
+  ContentType,
   Organization,
   Role,
   Site,
@@ -48,4 +50,47 @@ export async function seedTwoSites(dataSource: DataSource): Promise<TwoSites> {
     corrick: { site: corrickSite, editor: await editor(corrickSite.id) },
     bakery: { site: bakerySite, editor: await editor(bakerySite.id) },
   };
+}
+
+/** What a test must say about a page it seeds. Everything else takes the table's defaults. */
+export type PageSeed = Pick<
+  Content,
+  'siteId' | 'contentTypeId' | 'title' | 'slug' | 'path'
+> &
+  Partial<Content>;
+
+/**
+ * A page type written straight to the table, past the desks, so a test of a desk's reads does not
+ * depend on that desk's own writes. Defaults to a hierarchical "Page" type.
+ */
+export async function seedContentType(
+  dataSource: DataSource,
+  fields: Pick<ContentType, 'siteId'> & Partial<ContentType>,
+): Promise<ContentType> {
+  const m = dataSource.manager;
+  return m.save(
+    m.create(ContentType, {
+      name: 'Page',
+      slug: 'page',
+      hierarchical: true,
+      ...fields,
+    }),
+  );
+}
+
+/** A page written straight to the table, past the desks. */
+export async function seedPage(
+  dataSource: DataSource,
+  fields: PageSeed,
+): Promise<Content> {
+  const m = dataSource.manager;
+  return m.save(m.create(Content, fields));
+}
+
+/** A page that is in the trash (`deletedAt` set), written straight to the table. */
+export async function seedTrashedPage(
+  dataSource: DataSource,
+  fields: PageSeed,
+): Promise<Content> {
+  return seedPage(dataSource, { deletedAt: new Date(), ...fields });
 }
