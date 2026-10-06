@@ -41,8 +41,8 @@ reach it over REST.
   `ON DELETE SET NULL` (it would null `site_id` too), so those few links are plain keys and the API
   checks the site. See `../docs/DECISIONS.md` D-013.
 - **Desks extend `ScopedRepository`**, so every method takes `siteId` first. `PlatformRepository` is
-  the only unscoped desk: it extends nothing and is limited to `sites`, `hostnames` and `users`
-  (host → site, email or id → user, user → their memberships). A desk method that needs an
+  the only unscoped desk: it extends nothing and reads across sites only by address or by user
+  (host → site, email or id → user, user → their memberships, which also reads `site_members` and `roles`). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).
 - **Code that changes a site's addresses, name, theme or settings must call `SiteResolver.invalidateSite(siteId)`**
