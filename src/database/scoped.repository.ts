@@ -66,7 +66,7 @@ const OLDEST_FIRST: FindOptionsOrder<SiteRow> = { createdAt: 'ASC', id: 'ASC' };
  */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function isUuid(value: unknown): value is string {
+export function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID.test(value);
 }
 
@@ -75,7 +75,7 @@ function isUuid(value: unknown): value is string {
  * TypeORM 1.x already throws its own error for `undefined` or `null` in a filter, but `''` and
  * `'abc'` would reach Postgres. This also keeps protecting if that TypeORM option ever changes.
  */
-function requireSiteId(siteId: unknown): asserts siteId is string {
+export function requireSiteId(siteId: unknown): asserts siteId is string {
   if (!isUuid(siteId)) {
     throw new Error(
       'Site id is required: every desk call names its site by uuid',
