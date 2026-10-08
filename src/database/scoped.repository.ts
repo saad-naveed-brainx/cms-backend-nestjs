@@ -66,7 +66,7 @@ const OLDEST_FIRST: FindOptionsOrder<SiteRow> = { createdAt: 'ASC', id: 'ASC' };
  */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function isUuid(value: unknown): value is string {
+export function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID.test(value);
 }
 
@@ -74,8 +74,11 @@ function isUuid(value: unknown): value is string {
  * Refuses a missing or malformed site id before any SQL is sent, with one clear message.
  * TypeORM 1.x already throws its own error for `undefined` or `null` in a filter, but `''` and
  * `'abc'` would reach Postgres. This also keeps protecting if that TypeORM option ever changes.
+ *
+ * Exported, with `isUuid`, for a desk whose own query is a join and so cannot start from
+ * `findOneWhere` (the members desk's `findAccess`): it makes the same checks first.
  */
-function requireSiteId(siteId: unknown): asserts siteId is string {
+export function requireSiteId(siteId: unknown): asserts siteId is string {
   if (!isUuid(siteId)) {
     throw new Error(
       'Site id is required: every desk call names its site by uuid',

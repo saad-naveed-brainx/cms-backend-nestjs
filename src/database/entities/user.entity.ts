@@ -16,7 +16,10 @@ export class User extends TimestampedEntity {
   @Column('text')
   email: string;
 
-  /** Hash only (bcrypt/argon2). A plaintext password never reaches the database. */
+  /**
+   * Hash only, a scrypt string (`scrypt$N$r$p$salt$key`, made by PasswordService). A plaintext
+   * password never reaches the database.
+   */
   @Column('text')
   passwordHash: string;
 
