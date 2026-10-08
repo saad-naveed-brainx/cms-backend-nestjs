@@ -3,7 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { QueryFailedError, type DataSource } from 'typeorm';
 import { validate as isUuid, version as uuidVersion } from 'uuid';
 import { ContentTypeRepository } from '../src/content-types/content-type.repository.js';
-import { ContentRepository } from '../src/content/content.repository.js';
+import {
+  ContentRepository,
+  PathTakenError,
+} from '../src/content/content.repository.js';
 import { ContentStatus } from '../src/database/entities/content.entity.js';
 import { Content, ContentType, Site } from '../src/database/entities/index.js';
 import { createTestApp } from './support/app.js';
@@ -38,6 +41,15 @@ function constraintOf(error: unknown): string | undefined {
   expect(error).toBeInstanceOf(QueryFailedError);
   return (error as QueryFailedError<Error & { constraint?: string }>)
     .driverError.constraint;
+}
+
+/**
+ * A second page at an address the site already uses is a `PathTakenError` (CNT-01); the database's
+ * own refusal is its `cause`, so these tests still prove which rule said no.
+ */
+function pathTakenCause(error: unknown): string | undefined {
+  expect(error).toBeInstanceOf(PathTakenError);
+  return constraintOf((error as PathTakenError).cause);
 }
 
 describe('site-scoped desks for pages and page types', () => {
@@ -495,7 +507,7 @@ describe('site-scoped desks for pages and page types', () => {
         })
         .catch((e: unknown) => e);
 
-      expect(constraintOf(error)).toBe('content_site_id_path_key');
+      expect(pathTakenCause(error)).toBe('content_site_id_path_key');
     });
 
     it('[UC-SR-19] an empty update returns the page as it is and writes nothing (updatedAt unchanged)', async () => {
@@ -685,7 +697,9 @@ describe('site-scoped desks for pages and page types', () => {
       );
       expect(fulfilled).toHaveLength(1);
       expect(rejected).toHaveLength(1);
-      expect(constraintOf(rejected[0].reason)).toBe('content_site_id_path_key');
+      expect(pathTakenCause(rejected[0].reason)).toBe(
+        'content_site_id_path_key',
+      );
       expect(
         await dataSource.manager.count(Content, {
           where: { siteId: corrick, path: '/news' },
@@ -789,7 +803,7 @@ describe('site-scoped desks for pages and page types', () => {
         })
         .catch((e: unknown) => e);
 
-      expect(constraintOf(error)).toBe('content_site_id_path_key');
+      expect(pathTakenCause(error)).toBe('content_site_id_path_key');
       expect(await storedPage(about.id)).toMatchObject({
         title: 'About',
         slug: 'about',

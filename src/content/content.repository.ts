@@ -39,8 +39,9 @@ export type PageListOptions = {
 export class PathTakenError extends Error {
   readonly path: string;
 
-  constructor(path: string) {
-    super(`The address ${path} is already used by another page`);
+  /** `cause` is the database's own error, which names the rule that refused the write. */
+  constructor(path: string, cause?: unknown) {
+    super(`The address ${path} is already used by another page`, { cause });
     this.name = 'PathTakenError';
     this.path = path;
   }
@@ -109,7 +110,7 @@ export class ContentRepository extends ScopedRepository<Content, PageDefaults> {
     try {
       return await super.create(siteId, data);
     } catch (error) {
-      if (isPathTaken(error)) throw new PathTakenError(data.path);
+      if (isPathTaken(error)) throw new PathTakenError(data.path, error);
       throw error;
     }
   }
