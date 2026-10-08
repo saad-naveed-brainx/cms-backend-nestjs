@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -27,8 +28,8 @@ import { ContentService } from './content.service.js';
 /**
  * Pages of the site named by `X-Site-Id` (CNT-01). Reading is for every member of the site;
  * creating needs `content.create`; editing is decided by the service (`content.edit_any`, or
- * `content.edit_own` on a page the person created). There is no delete, publish, or move here:
- * those are CNT-11, CNT-03 and CNT-04/05/06.
+ * `content.edit_own` on a page the person created); publishing needs `content.publish`. There is
+ * no delete or move here: those are CNT-11 and CNT-04/05/06.
  */
 @Controller('content')
 export class ContentController {
@@ -70,5 +71,29 @@ export class ContentController {
       id,
       parseOr400(updatePageBody, body),
     );
+  }
+
+  /** Makes a page live. Needs `content.publish`, and nothing else. */
+  @Post(':id/publish')
+  @HttpCode(200)
+  @RequirePermission(Permission.ContentPublish)
+  publish(
+    @CurrentSite() site: SiteAccess,
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.content.publish(site, user, id);
+  }
+
+  /** Takes a published page back to a draft. Needs `content.publish`. */
+  @Post(':id/unpublish')
+  @HttpCode(200)
+  @RequirePermission(Permission.ContentPublish)
+  unpublish(
+    @CurrentSite() site: SiteAccess,
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.content.unpublish(site, user, id);
   }
 }
