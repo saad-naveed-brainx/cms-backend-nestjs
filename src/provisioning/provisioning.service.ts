@@ -49,7 +49,8 @@ export class ProvisioningService {
    * `HostnameTakenError` for an address another site holds. In both cases nothing was created.
    *
    * The admin's password:
-   * - a user with that email already exists: they keep theirs, and supplying one is an error;
+   * - a user with that email already exists: they keep theirs (and their name: the one given here
+   *   is only used for a new user), and supplying a password is an error;
    * - a new user with a supplied password: that password is hashed and stored;
    * - a new user without one: 24 random characters, hashed and stored, and returned once.
    */
