@@ -10,10 +10,11 @@ import { Permission } from '../auth/permission.js';
 import { ContentTypeRepository } from '../content-types/content-type.repository.js';
 import { ContentStatus } from '../database/entities/content.entity.js';
 import type { Content, ContentType } from '../database/entities/index.js';
-import type {
-  CreatePageBody,
-  ListQuery,
-  UpdatePageBody,
+import {
+  refuseUncleanedBlocks,
+  type CreatePageBody,
+  type ListQuery,
+  type UpdatePageBody,
 } from './content-input.js';
 import { ContentRepository, PathTakenError } from './content.repository.js';
 
@@ -138,6 +139,7 @@ export class ContentService {
     user: AuthUser,
     body: CreatePageBody,
   ): Promise<PageView> {
+    refuseUncleanedBlocks(body.blocks ?? []);
     const type = await this.types.findBySlug(access.siteId, body.type);
     if (!type) {
       throw new BadRequestException({
@@ -186,6 +188,7 @@ export class ContentService {
       (access.permissions.includes(Permission.ContentEditOwn) &&
         page.createdBy === user.id);
     if (!mayEdit) throw new ForbiddenException();
+    if (body.blocks) refuseUncleanedBlocks(body.blocks, page.blocks);
 
     const updated = await this.pages.update(access.siteId, id, {
       ...body,

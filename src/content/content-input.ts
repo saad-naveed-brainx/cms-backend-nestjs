@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
 import { ContentStatus } from '../database/entities/content.entity.js';
 
@@ -76,4 +77,36 @@ export function parseOr400<T extends z.ZodType>(
       (issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`,
     ),
   });
+}
+
+const isRichText = (value: unknown): boolean =>
+  typeof value === 'object' &&
+  value !== null &&
+  (value as { type?: unknown }).type === 'richText';
+
+/**
+ * A `richText` block holds HTML, and HTML is only safe to store once it is cleaned when it is
+ * saved (BLK-05, docs/DECISIONS.md D-021). Until then none is accepted: a 400 listing each
+ * offender as `blocks.N: ...`. A page that already holds one (from before this rule) may keep it
+ * exactly as it is, so it can still be edited; `stored` is that page's blocks. Changing it, or
+ * adding another, is refused.
+ */
+export function refuseUncleanedBlocks(
+  blocks: readonly unknown[],
+  stored: readonly unknown[] = [],
+): void {
+  const kept = stored.filter(isRichText);
+  const problems = blocks.flatMap((block, index) =>
+    isRichText(block) && !kept.some((old) => isDeepStrictEqual(old, block))
+      ? [
+          `blocks.${index}: a richText block is not accepted yet: its HTML is only safe once it is cleaned on save (BLK-05)`,
+        ]
+      : [],
+  );
+  if (problems.length > 0) {
+    throw new BadRequestException({
+      message: 'Invalid request',
+      errors: problems,
+    });
+  }
 }
