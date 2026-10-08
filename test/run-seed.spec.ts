@@ -136,4 +136,20 @@ describe('runSeed', () => {
     expect(err.length).toBeGreaterThan(0);
     expect(calls).toEqual({ opened: 0, closed: 0 });
   });
+
+  it('[UC-TS-12] when the application cannot open at all (the database is down), it answers with one line and exit code 1, and prints no stack', async () => {
+    const failure = new Error('connect ECONNREFUSED\n    at the database');
+    const { io, out, err } = recordingIo();
+
+    const code = await runSeed(ARGV, {}, io, async () => {
+      throw failure;
+    });
+
+    expect(code).toBe(1);
+    expect(out).toEqual([]);
+    expect(err).toHaveLength(1);
+    expect(err[0]).toContain('ECONNREFUSED');
+    expect(err[0]).not.toContain('\n');
+    expect(err[0]).not.toContain(failure.stack as string);
+  });
 });

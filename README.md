@@ -44,6 +44,7 @@ CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
 | `npm run db:revert`       | build, undo the last migration         |
 | `npm run db:show`         | list migrations and their state        |
 | `npm run db:up`/`db:down` | Postgres via `docker-compose.yml`      |
+| `npm run seed -- <flags>` | build, create a tenant and its first admin (`--organization --site --host --email --name`, password from `SEED_ADMIN_PASSWORD`) |
 
 ## Endpoints
 
