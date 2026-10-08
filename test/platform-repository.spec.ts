@@ -6,7 +6,7 @@ import { PlatformRepository } from '../src/platform/platform.repository.js';
  * named exception). So its surface is pinned here. A third method would be a third unscoped query.
  */
 describe('the platform desk', () => {
-  it('[UC-SR-26] [UC-AU-20] has exactly its four lookups: findMembershipsByUserId, findSiteByHostname, findUserByEmail and findUserById', () => {
+  it('[UC-SR-26] [UC-AU-20] has exactly its five lookups: findMembershipsByUserId, findOrganizationsOwnedBy, findSiteByHostname, findUserByEmail and findUserById', () => {
     const methods = Object.getOwnPropertyNames(PlatformRepository.prototype)
       .filter((name) => name !== 'constructor')
       .sort();
@@ -18,6 +18,7 @@ describe('the platform desk', () => {
         'Every name on the class counts, private helpers included: keep those outside the class.',
     ).toEqual([
       'findMembershipsByUserId',
+      'findOrganizationsOwnedBy',
       'findSiteByHostname',
       'findUserByEmail',
       'findUserById',

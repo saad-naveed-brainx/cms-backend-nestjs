@@ -3,6 +3,7 @@ import { DataSource, type Repository } from 'typeorm';
 import type { Permission } from '../auth/permission.js';
 import {
   Hostname,
+  Organization,
   Role,
   Site,
   SiteMember,
@@ -28,10 +29,11 @@ export type UserMembership = {
  * (invariant 1; docs/DECISIONS.md D-015 and D-018; brief decision Q3).
  *
  * Kept narrow on purpose:
- * - It covers `sites`, `hostnames` and `users` only: the shared tables, plus a user's membership
- *   rows (`site_members` and the role each points at), read only by user. Whatever a site owns
+ * - It covers `sites`, `hostnames`, `users` and `organizations` only: the shared tables, plus a user's
+ *   membership rows (`site_members` and the role each points at), read only by user, and the
+ *   organisations a user owns. Whatever a site owns
  *   (pages, media, menus, ...) stays behind the scoped desks, and so does one site's member list.
- * - It has exactly four methods, because a fifth would be a fifth unscoped query.
+ * - It has exactly five methods, because a sixth would be a sixth unscoped query.
  *   test/platform-repository.spec.ts pins the list, private methods included: a helper belongs in
  *   a plain function outside this class, not on it.
  * - The address and email lookups lower-case their input and do nothing else: no trimming, no port
@@ -44,10 +46,12 @@ export type UserMembership = {
 export class PlatformRepository {
   private readonly sites: Repository<Site>;
   private readonly users: Repository<User>;
+  private readonly organizations: Repository<Organization>;
 
   constructor(dataSource: DataSource) {
     this.sites = dataSource.getRepository(Site);
     this.users = dataSource.getRepository(User);
+    this.organizations = dataSource.getRepository(Organization);
   }
 
   /**
@@ -109,6 +113,22 @@ export class PlatformRepository {
       .getRawMany<MembershipRow>();
 
     return rows.map(toMembership);
+  }
+
+  /**
+   * The organisations this user owns, ordered by name. Empty when they own none, and for an id that
+   * is not a uuid (no query is sent). Only the id and name leave: it answers "which organisation
+   * may this person add a site to" (GOV-08a).
+   */
+  async findOrganizationsOwnedBy(
+    userId: string,
+  ): Promise<{ id: string; name: string }[]> {
+    if (!isUuid(userId)) return [];
+    const rows = await this.organizations.find({
+      where: { ownerId: userId },
+      order: { name: 'ASC', id: 'ASC' },
+    });
+    return rows.map(({ id, name }) => ({ id, name }));
   }
 }
 

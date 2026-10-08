@@ -23,6 +23,19 @@ export const tenantInputSchema = z.object({
 
 export type TenantInput = z.infer<typeof tenantInputSchema>;
 
+/**
+ * What it takes to add a site to an organisation the person owns (GOV-08a). Strict: a field that is
+ * not listed (an owner, a site id) is refused, never ignored. `organizationId` is only needed when
+ * the person owns more than one organisation.
+ */
+export const siteInputSchema = z.strictObject({
+  name: displayName,
+  hostnames: z.array(z.string()).min(1).max(10),
+  organizationId: z.uuid().optional(),
+});
+
+export type SiteInput = z.infer<typeof siteInputSchema>;
+
 /** The input is not acceptable. `problems` is one readable line each, and the message lists them all. */
 export class ProvisionInputError extends Error {
   readonly problems: string[];
@@ -42,5 +55,21 @@ export class HostnameTakenError extends Error {
     super(`The web address "${hostname}" is already used by another site`);
     this.name = 'HostnameTakenError';
     this.hostname = hostname;
+  }
+}
+
+/** The person does not own the organisation (or owns none), so they may not add a site to it. */
+export class NotOrganizationOwnerError extends Error {
+  constructor() {
+    super('Only the owner of an organisation can add a site to it');
+    this.name = 'NotOrganizationOwnerError';
+  }
+}
+
+/** The person owns more than one organisation and did not say which one the site is for. */
+export class OrganizationRequiredError extends Error {
+  constructor() {
+    super('You own more than one organisation: say which one the site is for');
+    this.name = 'OrganizationRequiredError';
   }
 }
