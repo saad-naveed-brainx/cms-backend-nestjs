@@ -57,6 +57,13 @@ export class ProbeController {
     return { ok: true };
   }
 
+  /** Needs `members.manage`, which the first admin of a seeded tenant must hold (FND-06, UC-TS-02). */
+  @RequirePermission(Permission.MembersManage)
+  @Get('members')
+  members() {
+    return { ok: true };
+  }
+
   /** Shows who the handler thinks is calling, and for which site. */
   @RequirePermission(Permission.ContentPublish)
   @Get('whoami')

@@ -41,10 +41,17 @@ reach it over REST.
   `ON DELETE SET NULL` (it would null `site_id` too), so those few links are plain keys and the API
   checks the site. See `../docs/DECISIONS.md` D-013.
 - **Desks extend `ScopedRepository`**, so every method takes `siteId` first. `PlatformRepository` is
-  the only unscoped desk: it extends nothing and reads across sites only by address or by user
+  the unscoped desk for reads: it extends nothing and reads across sites only by address or by user
   (host → site, email or id → user, user → their memberships, which also reads `site_members` and `roles`). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).
+- **Creating a tenant** is `npm run seed -- --organization … --site … --host … --email … --name …`
+  (`--host` repeats; the first is primary). The admin's password is only ever `SEED_ADMIN_PASSWORD`
+  (12+ characters), never a flag; unset, a new user gets a generated one, printed once, and an
+  existing email keeps theirs. It needs the API's `.env` (`DATABASE_URL`, `JWT_SECRET`).
+  `ProvisioningRepository` is the second unscoped desk: writes, and only creates tenants, in one
+  transaction (`../docs/DECISIONS.md` D-019). A role's permission list is a snapshot: a permission
+  added to `Permission` later reaches existing roles only through a migration.
 - **Code that changes a site's addresses, name, theme or settings must call `SiteResolver.invalidateSite(siteId)`**
   (`src/sites/`), or visitors can see the old data for up to 60 seconds. It also forgets remembered
   "unknown" addresses, so a newly added address works at once (no `invalidateHost` call needed). Hook
