@@ -73,6 +73,11 @@ reach it over REST.
   website opens it with `GET /public/preview?host=&token=` (public, `Cache-Control: no-store`): the page as last
   saved, whatever its status, with `noIndex: true` and `preview.status`. A bad or expired token is a 401; a good one
   at another site's address, or for a trashed page, a 404. Stateless: a link cannot be withdrawn, only expire.
+- **The website caches the API's answers (CNT-08, `../docs/DECISIONS.md` D-032), so content changes must tell it.** Publish,
+  unpublish and saving a published page call `WebsiteCache.forgetSite(siteId)` (`src/website/`), which POSTs the site's
+  hostnames to `WEB_REVALIDATE_URL` with `REVALIDATE_SECRET`. Both unset: off. It never throws or fails the change; the
+  website's five-minute expiry is the safety net. A new route that changes what a published page shows must call it too.
+  The API tests run with it off (`vitest.config.e2e.ts`) unless a test points it at its own stand-in.
 - **Code that changes a site's addresses, name, theme or settings must call `SiteResolver.invalidateSite(siteId)`**
   (`src/sites/`), or visitors can see the old data for up to 60 seconds. It also forgets remembered
   "unknown" addresses, so a newly added address works at once (no `invalidateHost` call needed). Hook
