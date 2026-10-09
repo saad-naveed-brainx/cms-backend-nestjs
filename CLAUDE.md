@@ -78,6 +78,12 @@ reach it over REST.
   hostnames to `WEB_REVALIDATE_URL` with `REVALIDATE_SECRET`. Both unset: off. It never throws or fails the change; the
   website's five-minute expiry is the safety net. A new route that changes what a published page shows must call it too.
   The API tests run with it off (`vitest.config.e2e.ts`) unless a test points it at its own stand-in.
+- **A site's appearance** (GOV-04, `src/appearance/`, `../docs/DECISIONS.md` D-036): `GET /appearance` (any member) and
+  `PATCH /appearance` (`settings.manage`), both with `X-Site-Id`, read and save `{ name, tagline, footerNote, theme }`. The
+  tagline and footer note live in `sites.settings` (other settings are kept; empty removes one); the theme is sent whole
+  and checked against the website's own names and colour rule, mirrored by hand in `appearance-input.ts` (a choice added
+  to `web/src/theme/theme.ts` must be added there). `SiteRepository` is the site's own row, keyed by the checked
+  `siteId`, saved in one locked transaction. A save calls `invalidateSite` and `forgetSite`.
 - **Code that changes a site's addresses, name, theme or settings must call `SiteResolver.invalidateSite(siteId)`**
   (`src/sites/`), or visitors can see the old data for up to 60 seconds. It also forgets remembered
   "unknown" addresses, so a newly added address works at once (no `invalidateHost` call needed). Hook
