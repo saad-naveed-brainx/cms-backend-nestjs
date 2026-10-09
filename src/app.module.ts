@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { AppearanceModule } from './appearance/appearance.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { ContentTypesModule } from './content-types/content-types.module.js';
 import { ContentModule } from './content/content.module.js';
@@ -18,6 +19,7 @@ import { SitesModule } from './sites/sites.module.js';
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     AuthModule,
+    AppearanceModule,
     HealthModule,
     ContentModule,
     ContentTypesModule,
