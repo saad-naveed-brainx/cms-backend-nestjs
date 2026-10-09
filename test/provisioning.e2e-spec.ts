@@ -54,7 +54,12 @@ const ALL_PERMISSIONS = Object.values(Permission);
 const sorted = <T>(values: readonly T[]): T[] => [...values].sort();
 
 type Membership = {
-  site: { id: string; name: string; primaryHost: string | null };
+  site: {
+    id: string;
+    name: string;
+    primaryHost: string | null;
+    theme: Record<string, unknown>;
+  };
   role: { id: string; name: string };
   permissions: Permission[];
 };
@@ -202,6 +207,7 @@ describe('creating a tenant', () => {
       id: result.site.id,
       name: 'Orchard Bakery',
       primaryHost: 'orchard.test',
+      theme: {},
     });
     expect(membership.role).toEqual({ id: role.id, name: 'Administrator' });
     expect(sorted(membership.permissions)).toEqual(sorted(ALL_PERMISSIONS));

@@ -13,8 +13,16 @@ import { isUuid } from '../database/scoped.repository.js';
 
 /** One site a user belongs to, with its main web address and their role there. */
 export type UserMembership = {
-  /** `primaryHost` is the site's main address (`cafe.example.com`); `null` only if it has none. */
-  site: { id: string; name: string; primaryHost: string | null };
+  /**
+   * `primaryHost` is the site's main address (`cafe.example.com`), `null` only if it has none;
+   * `theme` is the site's stored theme as it is (`{}` for a new site), for the admin's live preview.
+   */
+  site: {
+    id: string;
+    name: string;
+    primaryHost: string | null;
+    theme: Record<string, unknown>;
+  };
   role: { id: string; name: string; permissions: Permission[] };
 };
 
@@ -111,6 +119,7 @@ export class PlatformRepository {
       .select('site.id', 'siteId')
       .addSelect('site.name', 'siteName')
       .addSelect('hostname.hostname', 'primaryHost')
+      .addSelect('site.theme', 'theme')
       .addSelect('role.id', 'roleId')
       .addSelect('role.name', 'roleName')
       // `pg` hands an enum array back as the text `{a,b}`; as text[] it arrives as an array.
@@ -144,6 +153,7 @@ type MembershipRow = {
   siteId: string;
   siteName: string;
   primaryHost: string | null;
+  theme: Record<string, unknown> | null;
   roleId: string;
   roleName: string;
   permissions: Permission[];
@@ -155,6 +165,7 @@ function toMembership(row: MembershipRow): UserMembership {
       id: row.siteId,
       name: row.siteName,
       primaryHost: row.primaryHost ?? null,
+      theme: row.theme ?? {},
     },
     role: {
       id: row.roleId,

@@ -6,7 +6,12 @@ import { TokenService } from './token.service.js';
 
 /** One site the user belongs to, with its main web address, their role there and what that role allows. */
 export type Membership = {
-  site: { id: string; name: string; primaryHost: string | null };
+  site: {
+    id: string;
+    name: string;
+    primaryHost: string | null;
+    theme: Record<string, unknown>;
+  };
   role: { id: string; name: string };
   permissions: Permission[];
 };

@@ -86,6 +86,7 @@ describe('POST /auth/login', () => {
           id: corrick.site.id,
           name: 'Corrick',
           primaryHost: 'corrick.test',
+          theme: {},
         },
         role: { id: corrick.editor.id, name: 'Editor' },
         permissions: [Permission.ContentCreate, Permission.ContentPublish],
@@ -130,6 +131,7 @@ describe('POST /auth/login', () => {
           id: corrick.site.id,
           name: 'Corrick',
           primaryHost: 'corrick.test',
+          theme: {},
         },
         role: { id: corrick.editor.id, name: 'Editor' },
         permissions: corrick.editor.permissions,
@@ -166,6 +168,27 @@ describe('POST /auth/login', () => {
     ]);
   });
 
+  it('[UC-LP-01] each site comes with its stored theme, as the admin’s live preview draws it', async () => {
+    const { dana, corrick } = world;
+    const theme = { typeSet: 'editorial', palette: { paper: '#fffaf0' } };
+    await dataSource.query('UPDATE sites SET theme = $1 WHERE id = $2', [
+      JSON.stringify(theme),
+      corrick.site.id,
+    ]);
+
+    const res = await login({ email: dana.email, password: TEST_PASSWORD });
+
+    // Stored as it is, not filled in: the admin lays it over the default theme, as the website does.
+    expect(res.status).toBe(200);
+    const themes = (
+      res.body.memberships as { site: { name: string; theme: object } }[]
+    ).map((m) => [m.site.name, m.site.theme]);
+    expect(themes).toEqual([
+      ['Bakery', {}],
+      ['Corrick', theme],
+    ]);
+  });
+
   it('[UC-AU-03] memberships come from every site the user belongs to, and may be none', async () => {
     const { dana, chen, corrick, bakery } = world;
 
@@ -176,7 +199,12 @@ describe('POST /auth/login', () => {
     expect(asDana.status).toBe(200);
     expect(asDana.body.memberships).toEqual([
       {
-        site: { id: bakery.site.id, name: 'Bakery', primaryHost: null },
+        site: {
+          id: bakery.site.id,
+          name: 'Bakery',
+          primaryHost: null,
+          theme: {},
+        },
         role: { id: bakery.contributor.id, name: 'Contributor' },
         permissions: [Permission.ContentCreate],
       },
@@ -185,6 +213,7 @@ describe('POST /auth/login', () => {
           id: corrick.site.id,
           name: 'Corrick',
           primaryHost: 'corrick.test',
+          theme: {},
         },
         role: { id: corrick.admin.id, name: 'Admin' },
         permissions: corrick.admin.permissions,
