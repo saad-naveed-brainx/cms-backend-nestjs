@@ -196,6 +196,9 @@ export async function seedAuthWorld(
   const bakerySite = await m.save(
     m.create(Site, { organizationId: org.id, name: 'Bakery' }),
   );
+  // Corrick has a main address and a second one; Bakery has none, so sign-in answers null for it.
+  await seedHostname(dataSource, corrickSite.id, 'corrick.test', true);
+  await seedHostname(dataSource, corrickSite.id, 'www.corrick.test');
 
   const corrickRoles = {
     editor: await seedRole(dataSource, {

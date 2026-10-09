@@ -42,7 +42,8 @@ reach it over REST.
   checks the site. See `../docs/DECISIONS.md` D-013.
 - **Desks extend `ScopedRepository`**, so every method takes `siteId` first. `PlatformRepository` is
   the unscoped desk for reads: it extends nothing and reads across sites only by address or by user
-  (host → site, email or id → user, user → their memberships, which also reads `site_members` and `roles`, and
+  (host → site, email or id → user, user → their memberships, which also reads `site_members`, `roles` and each site's primary
+  hostname, which sign-in returns as `site.primaryHost` so the admin can link to the site, and
   user → the organisations they own). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).

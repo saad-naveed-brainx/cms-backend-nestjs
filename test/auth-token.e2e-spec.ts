@@ -57,7 +57,11 @@ describe('GET /auth/me and the token guard', () => {
       user: { id: ayesha.id, email: 'ayesha@corrick.test', name: 'Ayesha' },
       memberships: [
         {
-          site: { id: corrick.site.id, name: 'Corrick' },
+          site: {
+            id: corrick.site.id,
+            name: 'Corrick',
+            primaryHost: 'corrick.test',
+          },
           role: { id: corrick.editor.id, name: 'Editor' },
           permissions: [Permission.ContentCreate, Permission.ContentPublish],
         },
@@ -92,7 +96,11 @@ describe('GET /auth/me and the token guard', () => {
       },
       memberships: [
         {
-          site: { id: corrick.site.id, name: 'Corrick' },
+          site: {
+            id: corrick.site.id,
+            name: 'Corrick',
+            primaryHost: 'corrick.test',
+          },
           role: { id: corrick.editor.id, name: 'Editor' },
           permissions: changed,
         },
