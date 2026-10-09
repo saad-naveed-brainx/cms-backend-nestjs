@@ -73,6 +73,17 @@ export class ContentController {
     );
   }
 
+  /**
+   * A 30-minute link that shows this page as last saved, published or not, on the site's own
+   * address (`?preview=<token>` on the website). Any member of the site may ask for one.
+   */
+  @Post(':id/preview')
+  @HttpCode(200)
+  @SiteScoped()
+  preview(@CurrentSite() site: SiteAccess, @Param('id') id: string) {
+    return this.content.preview(site.siteId, id);
+  }
+
   /** Makes a page live. Needs `content.publish`, and nothing else. */
   @Post(':id/publish')
   @HttpCode(200)
