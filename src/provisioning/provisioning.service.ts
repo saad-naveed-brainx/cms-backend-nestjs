@@ -1,11 +1,20 @@
 import { randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
+import type { z } from 'zod';
 import { PasswordService } from '../auth/password.service.js';
+import { Permission } from '../auth/permission.js';
 import { PlatformRepository } from '../platform/platform.repository.js';
 import { normalizeHost } from '../sites/normalize-host.js';
-import { ProvisioningRepository } from './provisioning.repository.js';
+import { SiteResolver } from '../sites/site-resolver.service.js';
 import {
+  ADMINISTRATOR_ROLE,
+  ProvisioningRepository,
+} from './provisioning.repository.js';
+import {
+  NotOrganizationOwnerError,
+  OrganizationRequiredError,
   ProvisionInputError,
+  siteInputSchema,
   tenantInputSchema,
   type TenantInput,
 } from './tenant-input.js';
@@ -28,6 +37,18 @@ export type ProvisionResult = {
   };
 };
 
+/** A site added to an organisation the person owns: what was made, and the person's place in it. */
+export type ProvisionedSite = {
+  organization: { id: string; name: string };
+  site: { id: string; name: string };
+  hostnames: string[];
+  membership: {
+    site: { id: string; name: string };
+    role: { id: string; name: string };
+    permissions: Permission[];
+  };
+};
+
 /** 18 random bytes make exactly 24 base64url characters, with no padding. */
 const GENERATED_PASSWORD_BYTES = 18;
 
@@ -42,6 +63,7 @@ export class ProvisioningService {
     private readonly platform: PlatformRepository,
     private readonly passwords: PasswordService,
     private readonly repository: ProvisioningRepository,
+    private readonly resolver: SiteResolver,
   ) {}
 
   /**
@@ -97,11 +119,60 @@ export class ProvisioningService {
       },
     };
   }
+
+  /** The organisations this person owns: the ones they may add a site to. */
+  ownedOrganizations(userId: string): Promise<{ id: string; name: string }[]> {
+    return this.platform.findOrganizationsOwnedBy(userId);
+  }
+
+  /**
+   * Adds a site to an organisation the person owns (GOV-08a): checks and tidies the input, picks
+   * the organisation (the only one they own, or the one they name), and hands the all-or-nothing
+   * write to the provisioning desk. The person becomes the new site's administrator.
+   *
+   * Throws `ProvisionInputError` for input it cannot accept, `OrganizationRequiredError` when they
+   * own several and named none, `NotOrganizationOwnerError` when they own none or not the one
+   * named, and `HostnameTakenError` for an address another site holds. Nothing is created then.
+   */
+  async provisionSite(
+    userId: string,
+    rawInput: unknown,
+  ): Promise<ProvisionedSite> {
+    const input = parseWith(siteInputSchema, rawInput);
+    const hostnames = tidyHostnames(input.hostnames);
+
+    const owned = await this.platform.findOrganizationsOwnedBy(userId);
+    const organization = chooseOrganization(owned, input.organizationId);
+
+    const created = await this.repository.createSite({
+      organizationId: organization.id,
+      siteName: input.name,
+      hostnames,
+      userId,
+    });
+    // The new addresses may have been asked about already ("unknown" is remembered for a while).
+    this.resolver.invalidateSite(created.siteId);
+
+    const site = { id: created.siteId, name: input.name };
+    return {
+      organization,
+      site,
+      hostnames,
+      membership: {
+        site,
+        role: { id: created.roleId, name: ADMINISTRATOR_ROLE },
+        permissions: Object.values(Permission),
+      },
+    };
+  }
 }
 
 /** The input as the schema reads it, or a `ProvisionInputError` with a line for each problem. */
-function parseInput(rawInput: unknown): TenantInput {
-  const parsed = tenantInputSchema.safeParse(rawInput);
+function parseWith<T extends z.ZodType>(
+  schema: T,
+  rawInput: unknown,
+): z.infer<T> {
+  const parsed = schema.safeParse(rawInput);
   if (parsed.success) return parsed.data;
 
   throw new ProvisionInputError(
@@ -109,6 +180,10 @@ function parseInput(rawInput: unknown): TenantInput {
       (issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`,
     ),
   );
+}
+
+function parseInput(rawInput: unknown): TenantInput {
+  return parseWith(tenantInputSchema, rawInput);
 }
 
 /**
@@ -133,4 +208,24 @@ function tidyHostnames(raw: string[]): string[] {
 
   if (problems.length > 0) throw new ProvisionInputError(problems);
   return tidied;
+}
+
+/**
+ * The organisation a new site goes into: the one named, which must be one the person owns, or the
+ * only one they own. Owning none, or not owning the one named, is `NotOrganizationOwnerError`;
+ * owning several and naming none is `OrganizationRequiredError`.
+ */
+function chooseOrganization(
+  owned: { id: string; name: string }[],
+  named: string | undefined,
+): { id: string; name: string } {
+  if (named !== undefined) {
+    const found = owned.find((item) => item.id === named);
+    if (!found) throw new NotOrganizationOwnerError();
+    return found;
+  }
+  if (owned.length > 1) throw new OrganizationRequiredError();
+  const only = owned[0];
+  if (!only) throw new NotOrganizationOwnerError();
+  return only;
 }

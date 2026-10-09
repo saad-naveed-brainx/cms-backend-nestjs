@@ -64,6 +64,7 @@ describe('runSeed', () => {
       { findUserByEmail: unreached } as never,
       { hash: unreached } as never,
       { createTenant: unreached } as never,
+      { invalidateSite: unreached } as never,
     );
     const databaseError = new Error('connection terminated unexpectedly');
 

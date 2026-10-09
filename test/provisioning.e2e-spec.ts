@@ -708,22 +708,23 @@ describe('creating a tenant', () => {
     expect(new Set(ownedIds).size).toBe(6);
   });
 
-  it('[UC-TS-13] the platform desk keeps its four methods, only the provisioning desk touches TypeORM among the new files, the schema is unchanged and the seed script exists', async () => {
+  it('[UC-TS-13] the platform desk keeps its five methods, only the provisioning desk touches TypeORM among the new files, the schema is unchanged and the seed script exists', async () => {
     const methodsOf = (type: { prototype: object }) =>
       Object.getOwnPropertyNames(type.prototype)
         .filter((name) => name !== 'constructor')
         .sort();
     expect(methodsOf(PlatformRepository)).toEqual([
       'findMembershipsByUserId',
+      'findOrganizationsOwnedBy',
       'findSiteByHostname',
       'findUserByEmail',
       'findUserById',
     ]);
-    // The second unscoped desk is as narrow as the first: one method, named for what it does.
+    // The second unscoped desk is as narrow as the first: its two creations, named for what they do.
     expect(
       methodsOf(ProvisioningRepository),
-      'ProvisioningRepository is the only place that creates a tenant, so it has createTenant and nothing else (helpers belong outside the class)',
-    ).toEqual(['createTenant']);
+      'ProvisioningRepository is the only place that creates a tenant or a site, so it has createTenant and createSite and nothing else (helpers belong outside the class)',
+    ).toEqual(['createSite', 'createTenant']);
 
     // The lint rule lets only `*.repository.ts` import TypeORM: of the new files, only this one does.
     const srcDir = fileURLToPath(new URL('../src/', import.meta.url));

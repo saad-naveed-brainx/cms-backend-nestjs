@@ -425,7 +425,7 @@ describe('GET /sites/resolve', () => {
     );
   });
 
-  it('[UC-HR-18] the rest of the app still works, the route exists, and the platform desk has exactly its four known methods', async () => {
+  it('[UC-HR-18] the rest of the app still works, the route exists, and the platform desk has exactly its five known methods', async () => {
     const health = await call('/health');
     expect(health.status).toBe(200);
     expect(health.body).toMatchObject({ status: 'ok', database: 'up' });
@@ -444,9 +444,11 @@ describe('GET /sites/resolve', () => {
     const methods = Object.getOwnPropertyNames(PlatformRepository.prototype)
       .filter((name) => name !== 'constructor')
       .sort();
-    // Two lookups added by auth (FND-05); the same list test/platform-repository.spec.ts pins.
+    // Two lookups added by auth (FND-05), one by site creation (GOV-08a); the same list
+    // test/platform-repository.spec.ts pins.
     expect(methods).toEqual([
       'findMembershipsByUserId',
+      'findOrganizationsOwnedBy',
       'findSiteByHostname',
       'findUserByEmail',
       'findUserById',
