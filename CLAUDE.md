@@ -60,7 +60,7 @@ reach it over REST.
   an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
   `createTenant`, so a site made here and one made by the seed command are the same. It calls `invalidateSite` (below).
 - **The public website reads `GET /public/site?host=&path=&page=`** (`src/public/`, no token): the site comes from the host;
-  the answer is the published page at `path` (`kind: 'page'`; `/` is the page at `/home`) or, at a type's own address with
+  the answer is the published page at `path` (`kind: 'page'`; `/` is the page at `/home`), with its search fields, or, at a type's own address with
   no page there (`/blog` for posts), that type's published items newest first, ten at a time (`kind: 'listing'`, `page`
   from 1, past the end a 404, a bad number a 400; `../docs/DECISIONS.md` D-031). Both carry the site's name and theme and a
   navigation: published top-level Page-type pages except home, by title, then a link to each blog page with something
@@ -91,7 +91,10 @@ reach it over REST.
   `X-Site-Id`. Reading is for any member, creating needs `content.create`, editing needs `content.edit_any` or `content.edit_own`
   on a page you created. A page's address is its type's prefix plus its slug, fixed at creation; slug and parent change
   only through their own tickets (CNT-04/05/06), and a body naming them or the status is a 400; the status changes
-  through `POST /content/:id/publish` and `/unpublish` (`content.publish`). Lists page through `findPage` on the base
+  through `POST /content/:id/publish` and `/unpublish` (`content.publish`). A page's search fields (SEO-01) are set on
+  create and edit and come back with the page, not in list rows: `seoTitle` (up to 200 characters), `seoDescription` (500),
+  `canonicalUrl` (a full `https://` or `http://` address, 2000) and `noIndex`; an empty text clears one. The share image
+  (`ogImageId`) is refused until the media library. Lists page through `findPage` on the base
   desk. Block content is stored as sent and is **not sanitised until BLK-05**, so a `richText` block is refused (400) on create
   and edit until then; one a page already holds may stay exactly as it is (`../docs/DECISIONS.md` D-021).
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.

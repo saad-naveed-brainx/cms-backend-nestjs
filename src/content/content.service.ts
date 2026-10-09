@@ -59,7 +59,15 @@ function toSummary(page: Content, types: Map<string, ContentType>) {
 }
 
 function toPage(page: Content, types: Map<string, ContentType>) {
-  return { ...toSummary(page, types), blocks: page.blocks, data: page.data };
+  return {
+    ...toSummary(page, types),
+    blocks: page.blocks,
+    data: page.data,
+    seoTitle: page.seoTitle,
+    seoDescription: page.seoDescription,
+    canonicalUrl: page.canonicalUrl,
+    noIndex: page.noIndex,
+  };
 }
 
 function toTypeView(type: ContentType) {
@@ -175,6 +183,10 @@ export class ContentService {
         path: addressFor(type.urlPrefix, body.slug),
         blocks: body.blocks ?? [],
         data: body.data ?? {},
+        seoTitle: body.seoTitle ?? null,
+        seoDescription: body.seoDescription ?? null,
+        canonicalUrl: body.canonicalUrl ?? null,
+        noIndex: body.noIndex ?? false,
         createdBy: user.id,
         updatedBy: user.id,
       });

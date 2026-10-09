@@ -33,6 +33,37 @@ const blocks = z.array(block).max(200);
 /** Custom field values; checked against the content type's fields in TYP-02. */
 const data = z.record(z.string(), z.unknown());
 
+/** Text a person may leave out: tidied (trimmed), and empty means none (`null`). */
+const clearableText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullable()
+    .transform((value) => value || null);
+
+/**
+ * The search-engine fields (SEO-01). The title and description replace the page's own in search
+ * results; `canonicalUrl` is another address search engines should treat as this page's original
+ * (a full `https://` or `http://` address, nothing the browser could run); `noIndex` keeps the page
+ * out of search results. The share image waits for the media library (`ogImageId`, MED).
+ */
+const seo = {
+  seoTitle: clearableText(200).optional(),
+  seoDescription: clearableText(500).optional(),
+  canonicalUrl: clearableText(2000)
+    .pipe(
+      z
+        .url({
+          protocol: /^https?$/,
+          error: 'use a full address starting with https:// or http://',
+        })
+        .nullable(),
+    )
+    .optional(),
+  noIndex: z.boolean().optional(),
+};
+
 /** Strict: a field that is not listed (a `siteId`, a `path`, a `status`) is an error, never ignored. */
 export const createPageBody = z.strictObject({
   type: typeSlug,
@@ -40,6 +71,7 @@ export const createPageBody = z.strictObject({
   slug,
   blocks: blocks.optional(),
   data: data.optional(),
+  ...seo,
 });
 
 /** The address, status and parent do not change here: CNT-04, CNT-03 and CNT-05/06. */
@@ -48,9 +80,11 @@ export const updatePageBody = z
     title: title.optional(),
     blocks: blocks.optional(),
     data: data.optional(),
+    ...seo,
   })
   .refine((body) => Object.keys(body).length > 0, {
-    message: 'give at least one of title, blocks, data',
+    message:
+      'give at least one of title, blocks, data, seoTitle, seoDescription, canonicalUrl, noIndex',
   });
 
 export const listQuery = z.object({
