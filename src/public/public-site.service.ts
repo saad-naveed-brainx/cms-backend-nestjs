@@ -2,9 +2,12 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ContentTypeRepository } from '../content-types/content-type.repository.js';
 import { ContentRepository } from '../content/content.repository.js';
+import type { Content } from '../database/entities/index.js';
+import { PreviewTokenService } from '../preview/preview-token.service.js';
 import {
   InvalidHostError,
   SiteResolver,
@@ -42,6 +45,11 @@ export type PublicSiteView = {
   navigation: { title: string; path: string }[];
 };
 
+/** A preview: the page as last saved, whatever its status, never indexed. */
+export type PublicPreviewView = PublicSiteView & {
+  preview: { status: string };
+};
+
 /**
  * The public reading of a site (CNT-07): which site the address belongs to, and its published page
  * at a path. Only published pages are ever returned, so every other state, and every other site's
@@ -53,6 +61,7 @@ export class PublicSiteService {
     private readonly resolver: SiteResolver,
     private readonly pages: ContentRepository,
     private readonly types: ContentTypeRepository,
+    private readonly previews: PreviewTokenService,
   ) {}
 
   async lookUp(rawHost: unknown, rawPath: unknown): Promise<PublicSiteView> {
@@ -66,7 +75,46 @@ export class PublicSiteService {
       path === '/' ? HOME_PATH : path,
     );
     if (!page) throw new NotFoundException('Page not found');
+    return this.view(resolved, page);
+  }
 
+  /**
+   * One page through a preview link (feature site-preview): the page the link names, as last
+   * saved, published or not, but only at an address of the link's own site. A link that is
+   * malformed, tampered with or out of date is a 401; a good link used at another site's address,
+   * or for a page that has since been trashed, is the same 404 as any missing page.
+   */
+  async preview(
+    rawHost: unknown,
+    rawToken: unknown,
+  ): Promise<PublicPreviewView> {
+    const link = await this.previews.verify(rawToken);
+    if (!link) {
+      throw new UnauthorizedException(
+        'This preview link has expired or is not valid',
+      );
+    }
+    const resolved = await this.resolve(rawHost);
+    if (resolved.site.id !== link.siteId) {
+      throw new NotFoundException('Page not found');
+    }
+    const page = await this.pages.findById(link.siteId, link.pageId);
+    if (!page) throw new NotFoundException('Page not found');
+
+    const view = await this.view(resolved, page);
+    return {
+      ...view,
+      page: { ...view.page, noIndex: true },
+      preview: { status: page.status },
+    };
+  }
+
+  /** The answer for one page of a resolved site: the page, the site's name and look, and its navigation. */
+  private async view(
+    resolved: ResolvedHost,
+    page: Content,
+  ): Promise<PublicSiteView> {
+    const siteId = resolved.site.id;
     const pageType = await this.types.findBySlug(siteId, NAVIGATION_TYPE);
     const navigation = pageType
       ? await this.pages.findPublishedTopLevel(siteId, pageType.id, {

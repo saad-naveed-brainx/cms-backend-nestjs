@@ -10,6 +10,7 @@ import { Permission } from '../auth/permission.js';
 import { ContentTypeRepository } from '../content-types/content-type.repository.js';
 import { ContentStatus } from '../database/entities/content.entity.js';
 import type { Content, ContentType } from '../database/entities/index.js';
+import { PreviewTokenService } from '../preview/preview-token.service.js';
 import {
   refuseUncleanedBlocks,
   type CreatePageBody,
@@ -88,6 +89,7 @@ export class ContentService {
   constructor(
     private readonly pages: ContentRepository,
     private readonly types: ContentTypeRepository,
+    private readonly previews: PreviewTokenService,
   ) {}
 
   async listTypes(siteId: string): Promise<{ items: ContentTypeView[] }> {
@@ -125,6 +127,20 @@ export class ContentService {
       limit: query.limit,
       offset: query.offset,
     };
+  }
+
+  /**
+   * A preview link for one page, whatever its status: what was last saved, for 30 minutes, at
+   * this site's own addresses only. Any member may ask, as any member may read the page here.
+   */
+  async preview(
+    siteId: string,
+    id: string,
+  ): Promise<{ token: string; expiresAt: string }> {
+    const page = await this.pages.findById(siteId, id);
+    if (!page) throw new NotFoundException('Page not found');
+    const { token, expiresAt } = await this.previews.sign(siteId, page.id);
+    return { token, expiresAt: expiresAt.toISOString() };
   }
 
   async get(siteId: string, id: string): Promise<PageView> {

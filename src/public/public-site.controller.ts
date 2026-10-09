@@ -1,7 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Header, Query } from '@nestjs/common';
 import { Public } from '../auth/decorators.js';
 import {
   PublicSiteService,
+  type PublicPreviewView,
   type PublicSiteView,
 } from './public-site.service.js';
 
@@ -22,5 +23,20 @@ export class PublicSiteController {
     @Query('path') path: unknown,
   ): Promise<PublicSiteView> {
     return this.service.lookUp(host, path);
+  }
+
+  /**
+   * Public, no login: a preview link opened on the website (`?preview=<token>`). The token names
+   * one page of one site; the address must be that site's. Never stored by a cache, never indexed.
+   * A bad or expired token is a 401; a good one at another site's address is a 404.
+   */
+  @Public()
+  @Get('preview')
+  @Header('Cache-Control', 'no-store')
+  preview(
+    @Query('host') host: unknown,
+    @Query('token') token: unknown,
+  ): Promise<PublicPreviewView> {
+    return this.service.preview(host, token);
   }
 }
