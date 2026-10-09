@@ -2,6 +2,7 @@ import { Controller, Get, Header, Query } from '@nestjs/common';
 import { Public } from '../auth/decorators.js';
 import {
   PublicSiteService,
+  type PublicListingView,
   type PublicPreviewView,
   type PublicSiteView,
 } from './public-site.service.js';
@@ -12,17 +13,20 @@ export class PublicSiteController {
 
   /**
    * Public, no login: the website asks this for every page it draws. The site comes from the
-   * address (`host`), never from an id; the page is the published one at `path` (`/` is the home
-   * page). A missing or malformed `host` or `path` is a 400; an unknown address, a path with no
-   * published page, a draft, a trashed page and another site's page are all a 404.
+   * address (`host`), never from an id; the answer is the published page at `path` (`/` is the
+   * home page, `kind: 'page'`), or, at a type's own address with no page there (`/blog`), that
+   * type's published items newest first (`kind: 'listing'`, `page` counting from 1). A missing or
+   * malformed `host`, `path` or `page` is a 400; an unknown address, a path with no published
+   * page, a draft, a trashed page, another site's page and a blog page past the end are a 404.
    */
   @Public()
   @Get('site')
   site(
     @Query('host') host: unknown,
     @Query('path') path: unknown,
-  ): Promise<PublicSiteView> {
-    return this.service.lookUp(host, path);
+    @Query('page') page: unknown,
+  ): Promise<PublicSiteView | PublicListingView> {
+    return this.service.lookUp(host, path, page);
   }
 
   /**

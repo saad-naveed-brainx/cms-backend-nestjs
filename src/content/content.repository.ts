@@ -109,6 +109,22 @@ export class ContentRepository extends ScopedRepository<Content, PageDefaults> {
     return rows;
   }
 
+  /**
+   * One slice of a type's published items, newest first (by when they were published, ties by
+   * id), with how many there are in all: what a visitor's blog page lists.
+   */
+  findPublishedOfType(
+    siteId: string,
+    contentTypeId: string,
+    { limit, offset }: { limit: number; offset: number },
+  ): Promise<{ rows: Content[]; total: number }> {
+    return this.findPage(
+      siteId,
+      { contentTypeId, status: ContentStatus.Published },
+      { order: { publishedAt: 'DESC', id: 'DESC' }, limit, offset },
+    );
+  }
+
   /** The site's trashed pages, oldest first. */
   findTrashed(siteId: string): Promise<Content[]> {
     return this.findAllWhere(

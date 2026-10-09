@@ -17,4 +17,12 @@ export class ContentTypeRepository extends ScopedRepository<
   findBySlug(siteId: string, slug: string): Promise<ContentType | null> {
     return this.findOneWhere(siteId, { slug });
   }
+
+  /** The site's type whose items live under this address (`/blog` for Post), or `null`. */
+  findByUrlPrefix(
+    siteId: string,
+    urlPrefix: string,
+  ): Promise<ContentType | null> {
+    return this.findOneWhere(siteId, { urlPrefix });
+  }
 }

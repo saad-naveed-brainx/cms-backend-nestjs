@@ -59,9 +59,12 @@ reach it over REST.
   owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
   an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
   `createTenant`, so a site made here and one made by the seed command are the same. It calls `invalidateSite` (below).
-- **The public website reads `GET /public/site?host=&path=`** (`src/public/`, no token): the site comes from the host, the
-  page is the published one at `path` (`/` is the page at `/home`), with the site's name and theme and a first
-  navigation (published top-level Page-type pages except home, by title, at most 8). A draft, an unpublished page, a
+- **The public website reads `GET /public/site?host=&path=&page=`** (`src/public/`, no token): the site comes from the host;
+  the answer is the published page at `path` (`kind: 'page'`; `/` is the page at `/home`) or, at a type's own address with
+  no page there (`/blog` for posts), that type's published items newest first, ten at a time (`kind: 'listing'`, `page`
+  from 1, past the end a 404, a bad number a 400; `../docs/DECISIONS.md` D-031). Both carry the site's name and theme and a
+  navigation: published top-level Page-type pages except home, by title, then a link to each blog page with something
+  published (`Posts`), at most 8 with the blog links kept. A draft, an unpublished page, a
   trashed page, an unknown path and another site's page are the same 404; nothing internal (ids) is in the answer; a
   bad `host` or `path` is a 400 before any query.
 - **Preview links** (`src/preview/`, `../docs/DECISIONS.md` D-029): `POST /content/:id/preview` (any member, `X-Site-Id`)

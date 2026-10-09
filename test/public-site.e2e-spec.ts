@@ -86,12 +86,13 @@ describe('a published page by address', () => {
     });
     await live(orchard.admin, 'contact', { title: 'Contact' });
     await live(orchard.admin, 'about', { title: 'About us' });
-    // Not in the navigation: a post, a draft and the home page itself.
+    // Not in the navigation: a post (it gives the blog page its link instead), a draft and the home page itself.
     await live(orchard.admin, 'hello', { title: 'A post', type: 'post' });
     await world.newPage(orchard.admin, 'secret', { title: 'Draft only' });
 
     const res = await publicSite('orchard.test', '/').expect(200);
     expect(res.body).toEqual({
+      kind: 'page',
       site: { name: 'Orchard Bakery', theme: ORCHARD_THEME, settings: {} },
       host: 'orchard.test',
       canonicalHost: 'orchard.test',
@@ -107,6 +108,7 @@ describe('a published page by address', () => {
       navigation: [
         { title: 'About us', path: '/about' },
         { title: 'Contact', path: '/contact' },
+        { title: 'Posts', path: '/blog' },
       ],
     });
 
@@ -131,7 +133,7 @@ describe('a published page by address', () => {
     expect(other.body.host).toBe('orchard.test');
   });
 
-  it('[UC-RS-14] the navigation is the first eight published top-level pages by title, never a child, a post or a draft', async () => {
+  it('[UC-RS-14] the navigation is the first published top-level pages by title, never a child, a post or a draft, then the blog link, eight in all', async () => {
     const { orchard, dataSource } = world;
     await live(orchard.admin, 'home', { title: 'Home' });
     const top = await live(orchard.admin, 'zz-parent', {
@@ -152,8 +154,9 @@ describe('a published page by address', () => {
     await world.newPage(orchard.admin, 'aaa-draft', { title: 'AAA Draft' });
 
     const res = await publicSite('orchard.test', '/').expect(200);
-    expect(res.body.navigation).toEqual(
-      [
+    // A published post is not a link of its own; it gives the blog page its link, which is kept.
+    expect(res.body.navigation).toEqual([
+      ...[
         'Page 1',
         'Page 2',
         'Page 3',
@@ -161,9 +164,9 @@ describe('a published page by address', () => {
         'Page 5',
         'Page 6',
         'Page 7',
-        'Page 8',
       ].map((title, index) => ({ title, path: `/page-${index + 1}` })),
-    );
+      { title: 'Posts', path: '/blog' },
+    ]);
   });
 });
 
