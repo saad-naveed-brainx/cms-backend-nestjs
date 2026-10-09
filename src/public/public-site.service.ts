@@ -21,11 +21,14 @@ const NAVIGATION_LIMIT = 8;
 /** The key of the type whose top-level pages make up the navigation (posts do not). */
 const NAVIGATION_TYPE = 'page';
 
-/**
- * What the public website needs to draw one page of one site, and nothing internal: no site id,
- * no page id, no user ids.
- */
-export type PublicSiteView = {
+/** How many items a blog page lists at a time. */
+export const LISTING_PAGE_SIZE = 10;
+
+/** The furthest a blog page can be asked to go, so a request cannot ask for an absurd offset. */
+const MAX_LISTING_PAGE = 1000;
+
+/** The site and its menu: what every answer to the website carries. Nothing internal (no ids). */
+type SiteFrame = {
   site: {
     name: string;
     theme: Record<string, unknown>;
@@ -33,6 +36,12 @@ export type PublicSiteView = {
   };
   host: string;
   canonicalHost: string;
+  navigation: { title: string; path: string }[];
+};
+
+/** One page of one site: what the website draws at a page's address. */
+export type PublicSiteView = SiteFrame & {
+  kind: 'page';
   page: {
     title: string;
     path: string;
@@ -42,7 +51,22 @@ export type PublicSiteView = {
     publishedAt: Date | null;
     blocks: unknown[];
   };
-  navigation: { title: string; path: string }[];
+};
+
+/**
+ * A type's published items, newest first, at the type's own address (`/blog` lists the posts):
+ * the site's blog page. `page` counts from 1, `LISTING_PAGE_SIZE` at a time.
+ */
+export type PublicListingView = SiteFrame & {
+  kind: 'listing';
+  listing: {
+    title: string;
+    path: string;
+    items: { title: string; path: string; publishedAt: Date | null }[];
+    page: number;
+    pageSize: number;
+    total: number;
+  };
 };
 
 /** A preview: the page as last saved, whatever its status, never indexed. */
@@ -50,10 +74,29 @@ export type PublicPreviewView = PublicSiteView & {
   preview: { status: string };
 };
 
+/** A type's name as a menu or a heading shows it: "Post" is "Posts" (until types carry a plural). */
+function pluralOf(name: string): string {
+  if (/s$/i.test(name)) return name;
+  if (/[^aeiou]y$/i.test(name)) return `${name.slice(0, -1)}ies`;
+  return `${name}s`;
+}
+
+/** The blog page asked for: 1 when not given; a whole number from 1 to 1000, or a 400. */
+function parseListingPage(raw: unknown): number {
+  if (raw === undefined) return 1;
+  const page =
+    typeof raw === 'string' && /^\d{1,4}$/.test(raw) ? Number(raw) : NaN;
+  if (!(page >= 1 && page <= MAX_LISTING_PAGE)) {
+    throw new BadRequestException('page must be a whole number from 1 to 1000');
+  }
+  return page;
+}
+
 /**
- * The public reading of a site (CNT-07): which site the address belongs to, and its published page
- * at a path. Only published pages are ever returned, so every other state, and every other site's
- * page, is the same "not found" as a path nobody has used.
+ * The public reading of a site (CNT-07): which site the address belongs to, and what is published
+ * at a path: a page, or, at a type's own address with no page there, that type's blog page. Only
+ * published items are ever returned, so every other state, and every other site's page, is the same
+ * "not found" as a path nobody has used.
  */
 @Injectable()
 export class PublicSiteService {
@@ -64,18 +107,56 @@ export class PublicSiteService {
     private readonly previews: PreviewTokenService,
   ) {}
 
-  async lookUp(rawHost: unknown, rawPath: unknown): Promise<PublicSiteView> {
-    // Both are checked before any database call. The path goes first: it is the cheaper test.
+  async lookUp(
+    rawHost: unknown,
+    rawPath: unknown,
+    rawPage?: unknown,
+  ): Promise<PublicSiteView | PublicListingView> {
+    // All are checked before any database call. The path goes first: it is the cheaper test.
     const path = parsePublicPath(rawPath);
+    const listingPage = parseListingPage(rawPage);
     const resolved = await this.resolve(rawHost);
     const siteId = resolved.site.id;
 
+    // A page someone made wins over a blog page at the same address.
     const page = await this.pages.findPublishedByPath(
       siteId,
       path === '/' ? HOME_PATH : path,
     );
-    if (!page) throw new NotFoundException('Page not found');
-    return this.view(resolved, page);
+    if (page) return this.view(resolved, page);
+
+    const listed =
+      path === '/' ? null : await this.types.findByUrlPrefix(siteId, path);
+    if (!listed) throw new NotFoundException('Page not found');
+
+    const { rows, total } = await this.pages.findPublishedOfType(
+      siteId,
+      listed.id,
+      {
+        limit: LISTING_PAGE_SIZE,
+        offset: (listingPage - 1) * LISTING_PAGE_SIZE,
+      },
+    );
+    // Page 1 of an empty blog is "nothing yet"; a page past the end is not there.
+    if (rows.length === 0 && listingPage > 1) {
+      throw new NotFoundException('Page not found');
+    }
+    return {
+      kind: 'listing',
+      ...(await this.frame(resolved)),
+      listing: {
+        title: pluralOf(listed.name),
+        path,
+        items: rows.map(({ title, path, publishedAt }) => ({
+          title,
+          path,
+          publishedAt,
+        })),
+        page: listingPage,
+        pageSize: LISTING_PAGE_SIZE,
+        total,
+      },
+    };
   }
 
   /**
@@ -109,28 +190,14 @@ export class PublicSiteService {
     };
   }
 
-  /** The answer for one page of a resolved site: the page, the site's name and look, and its navigation. */
+  /** The answer for one page of a resolved site. */
   private async view(
     resolved: ResolvedHost,
     page: Content,
   ): Promise<PublicSiteView> {
-    const siteId = resolved.site.id;
-    const pageType = await this.types.findBySlug(siteId, NAVIGATION_TYPE);
-    const navigation = pageType
-      ? await this.pages.findPublishedTopLevel(siteId, pageType.id, {
-          exceptPath: HOME_PATH,
-          limit: NAVIGATION_LIMIT,
-        })
-      : [];
-
     return {
-      site: {
-        name: resolved.site.name,
-        theme: resolved.site.theme,
-        settings: resolved.site.settings,
-      },
-      host: resolved.host,
-      canonicalHost: resolved.canonicalHost,
+      kind: 'page',
+      ...(await this.frame(resolved)),
       page: {
         title: page.title,
         path: page.path,
@@ -140,7 +207,52 @@ export class PublicSiteService {
         publishedAt: page.publishedAt,
         blocks: page.blocks,
       },
-      navigation: navigation.map(({ title, path }) => ({ title, path })),
+    };
+  }
+
+  /**
+   * The site's name, look and menu. The menu is its published top-level pages (not home), by
+   * title, then a link to each blog page that has something published (`Posts` at `/blog`), at
+   * most eight links in all, the blog links kept.
+   */
+  private async frame(resolved: ResolvedHost): Promise<SiteFrame> {
+    const siteId = resolved.site.id;
+    const types = await this.types.findMany(siteId);
+
+    const blogLinks: { title: string; path: string }[] = [];
+    for (const type of types) {
+      if (!type.urlPrefix) continue;
+      const { total } = await this.pages.findPublishedOfType(siteId, type.id, {
+        limit: 1,
+        offset: 0,
+      });
+      if (total > 0)
+        blogLinks.push({ title: pluralOf(type.name), path: type.urlPrefix });
+    }
+    blogLinks.sort((a, b) => a.title.localeCompare(b.title));
+
+    const pageType = types.find((type) => type.slug === NAVIGATION_TYPE);
+    const pageLimit = Math.max(0, NAVIGATION_LIMIT - blogLinks.length);
+    const topPages =
+      pageType && pageLimit > 0
+        ? await this.pages.findPublishedTopLevel(siteId, pageType.id, {
+            exceptPath: HOME_PATH,
+            limit: pageLimit,
+          })
+        : [];
+
+    return {
+      site: {
+        name: resolved.site.name,
+        theme: resolved.site.theme,
+        settings: resolved.site.settings,
+      },
+      host: resolved.host,
+      canonicalHost: resolved.canonicalHost,
+      navigation: [
+        ...topPages.map(({ title, path }) => ({ title, path })),
+        ...blogLinks,
+      ],
     };
   }
 
