@@ -42,16 +42,26 @@ reach it over REST.
   checks the site. See `../docs/DECISIONS.md` D-013.
 - **Desks extend `ScopedRepository`**, so every method takes `siteId` first. `PlatformRepository` is
   the unscoped desk for reads: it extends nothing and reads across sites only by address or by user
-  (host → site, email or id → user, user → their memberships, which also reads `site_members` and `roles`). A desk method that needs an
+  (host → site, email or id → user, user → their memberships, which also reads `site_members` and `roles`, and
+  user → the organisations they own). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).
 - **Creating a tenant** is `npm run seed -- --organization … --site … --host … --email … --name …`
   (`--host` repeats; the first is primary). The admin's password is only ever `SEED_ADMIN_PASSWORD`
   (12+ characters), never a flag; unset, a new user gets a generated one, printed once, and an
   existing email keeps theirs. It needs the API's `.env` (`DATABASE_URL`, `JWT_SECRET`).
-  `ProvisioningRepository` is the second unscoped desk: writes, and only creates tenants, in one
-  transaction (`../docs/DECISIONS.md` D-019). A role's permission list is a snapshot: a permission
+  `ProvisioningRepository` is the second unscoped desk: writes, and only creates (`createTenant`, `createSite`),
+  each in one transaction (`../docs/DECISIONS.md` D-019). A role's permission list is a snapshot: a permission
   added to `Permission` later reaches existing roles only through a migration.
+- **Creating a site from the admin** is `POST /sites` (`name`, `hostnames`, and `organizationId` only when the person
+  owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
+  an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
+  `createTenant`, so a site made here and one made by the seed command are the same. It calls `invalidateSite` (below).
+- **The public website reads `GET /public/site?host=&path=`** (`src/public/`, no token): the site comes from the host, the
+  page is the published one at `path` (`/` is the page at `/home`), with the site's name and theme and a first
+  navigation (published top-level Page-type pages except home, by title, at most 8). A draft, an unpublished page, a
+  trashed page, an unknown path and another site's page are the same 404; nothing internal (ids) is in the answer; a
+  bad `host` or `path` is a 400 before any query.
 - **Code that changes a site's addresses, name, theme or settings must call `SiteResolver.invalidateSite(siteId)`**
   (`src/sites/`), or visitors can see the old data for up to 60 seconds. It also forgets remembered
   "unknown" addresses, so a newly added address works at once (no `invalidateHost` call needed). Hook
@@ -66,7 +76,8 @@ reach it over REST.
   on a page you created. A page's address is its type's prefix plus its slug, fixed at creation; slug and parent change
   only through their own tickets (CNT-04/05/06), and a body naming them or the status is a 400; the status changes
   through `POST /content/:id/publish` and `/unpublish` (`content.publish`). Lists page through `findPage` on the base
-  desk. Block content is stored as sent and is **not sanitised until BLK-05** (`../docs/DECISIONS.md` D-021).
+  desk. Block content is stored as sent and is **not sanitised until BLK-05**, so a `richText` block is refused (400) on create
+  and edit until then; one a page already holds may stay exactly as it is (`../docs/DECISIONS.md` D-021).
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
 - **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in
   `vitest.config.e2e.ts`. `test/support/` has `createTestApp`, `resetDatabase` (refuses non-`_test`
