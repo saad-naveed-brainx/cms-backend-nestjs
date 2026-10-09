@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, IsNull, Not, QueryFailedError } from 'typeorm';
-import type { ContentStatus } from '../database/entities/content.entity.js';
+import { ContentStatus } from '../database/entities/content.entity.js';
 import { Content } from '../database/entities/index.js';
 import {
   ScopedRepository,
@@ -73,6 +73,40 @@ export class ContentRepository extends ScopedRepository<Content, PageDefaults> {
   /** The site's page at this full public path (`/about/team`), or `null`. */
   findByPath(siteId: string, path: string): Promise<Content | null> {
     return this.findOneWhere(siteId, { path });
+  }
+
+  /**
+   * The site's published page at this path, or `null`. Drafts, pages waiting for review, scheduled
+   * pages and trashed pages are not public, so they are `null` here, exactly like a path nobody
+   * has used.
+   */
+  findPublishedByPath(siteId: string, path: string): Promise<Content | null> {
+    return this.findOneWhere(siteId, {
+      path,
+      status: ContentStatus.Published,
+    });
+  }
+
+  /**
+   * The pages a visitor can reach from the top of the site: published, with no parent, of this
+   * type, except the one at `exceptPath` (the home page). By title, at most `limit`.
+   */
+  async findPublishedTopLevel(
+    siteId: string,
+    contentTypeId: string,
+    { exceptPath, limit }: { exceptPath: string; limit: number },
+  ): Promise<Content[]> {
+    const { rows } = await this.findPage(
+      siteId,
+      {
+        contentTypeId,
+        status: ContentStatus.Published,
+        parentId: IsNull(),
+        path: Not(exceptPath),
+      },
+      { order: { title: 'ASC', id: 'ASC' }, limit, offset: 0 },
+    );
+    return rows;
   }
 
   /** The site's trashed pages, oldest first. */

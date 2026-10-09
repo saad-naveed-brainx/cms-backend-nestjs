@@ -10,6 +10,7 @@ import { HealthModule } from './health/health.module.js';
 import { HostnamesModule } from './hostnames/hostnames.module.js';
 import { PlatformModule } from './platform/platform.module.js';
 import { ProvisioningModule } from './provisioning/provisioning.module.js';
+import { PublicModule } from './public/public.module.js';
 import { SitesModule } from './sites/sites.module.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { SitesModule } from './sites/sites.module.js';
     ContentTypesModule,
     PlatformModule,
     ProvisioningModule,
+    PublicModule,
     HostnamesModule,
     SitesModule,
   ],
