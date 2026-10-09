@@ -9,7 +9,6 @@ import { resetDatabase } from './support/database.js';
 import { ProbeController } from './support/probe.controller.js';
 import {
   seedAuthWorld,
-  seedHostname,
   seedMembership,
   type AuthWorld,
 } from './support/seed.js';
@@ -297,7 +296,7 @@ describe('the auth guards', () => {
 
   it('[UC-AU-20] the rest of the app still answers with no token, and the desk list is pinned', async () => {
     const { corrick } = world;
-    await seedHostname(dataSource, corrick.site.id, 'corrick.test', true);
+    // The auth world already gives Corrick its main address, corrick.test.
     const server = request(app.getHttpServer());
 
     const root = await server.get('/');

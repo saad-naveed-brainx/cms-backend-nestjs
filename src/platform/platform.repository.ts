@@ -11,9 +11,10 @@ import {
 } from '../database/entities/index.js';
 import { isUuid } from '../database/scoped.repository.js';
 
-/** One site a user belongs to, with their role there. */
+/** One site a user belongs to, with its main web address and their role there. */
 export type UserMembership = {
-  site: { id: string; name: string };
+  /** `primaryHost` is the site's main address (`cafe.example.com`); `null` only if it has none. */
+  site: { id: string; name: string; primaryHost: string | null };
   role: { id: string; name: string; permissions: Permission[] };
 };
 
@@ -86,9 +87,10 @@ export class PlatformRepository {
   }
 
   /**
-   * Every site this user belongs to, with their role there and its permissions, ordered by site
-   * name. Empty when they belong to none, and for an id that is not a uuid (no query is sent).
-   * One query: the role is joined on `(site_id, role_id)`, so it is always the site's own role.
+   * Every site this user belongs to, with its main web address, their role there and its
+   * permissions, ordered by site name. Empty when they belong to none, and for an id that is not a
+   * uuid (no query is sent). One query: the role is joined on `(site_id, role_id)`, so it is always
+   * the site's own role; the address is the site's one primary hostname (the admin links to it).
    */
   async findMembershipsByUserId(userId: string): Promise<UserMembership[]> {
     if (!isUuid(userId)) return [];
@@ -101,8 +103,14 @@ export class PlatformRepository {
         'role',
         'role.siteId = member.siteId AND role.id = member.roleId',
       )
+      .leftJoin(
+        Hostname,
+        'hostname',
+        'hostname.siteId = site.id AND hostname.isPrimary = true',
+      )
       .select('site.id', 'siteId')
       .addSelect('site.name', 'siteName')
+      .addSelect('hostname.hostname', 'primaryHost')
       .addSelect('role.id', 'roleId')
       .addSelect('role.name', 'roleName')
       // `pg` hands an enum array back as the text `{a,b}`; as text[] it arrives as an array.
@@ -135,6 +143,7 @@ export class PlatformRepository {
 type MembershipRow = {
   siteId: string;
   siteName: string;
+  primaryHost: string | null;
   roleId: string;
   roleName: string;
   permissions: Permission[];
@@ -142,7 +151,11 @@ type MembershipRow = {
 
 function toMembership(row: MembershipRow): UserMembership {
   return {
-    site: { id: row.siteId, name: row.siteName },
+    site: {
+      id: row.siteId,
+      name: row.siteName,
+      primaryHost: row.primaryHost ?? null,
+    },
     role: {
       id: row.roleId,
       name: row.roleName,

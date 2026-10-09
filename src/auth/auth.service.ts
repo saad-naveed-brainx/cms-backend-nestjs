@@ -4,9 +4,9 @@ import { PasswordService } from './password.service.js';
 import type { Permission } from './permission.js';
 import { TokenService } from './token.service.js';
 
-/** One site the user belongs to, with their role there and what that role allows. */
+/** One site the user belongs to, with its main web address, their role there and what that role allows. */
 export type Membership = {
-  site: { id: string; name: string };
+  site: { id: string; name: string; primaryHost: string | null };
   role: { id: string; name: string };
   permissions: Permission[];
 };

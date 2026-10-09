@@ -82,7 +82,11 @@ describe('POST /auth/login', () => {
     });
     expect(res.body.memberships).toEqual([
       {
-        site: { id: corrick.site.id, name: 'Corrick' },
+        site: {
+          id: corrick.site.id,
+          name: 'Corrick',
+          primaryHost: 'corrick.test',
+        },
         role: { id: corrick.editor.id, name: 'Editor' },
         permissions: [Permission.ContentCreate, Permission.ContentPublish],
       },
@@ -122,7 +126,11 @@ describe('POST /auth/login', () => {
     });
     expect(res.body.memberships).toEqual([
       {
-        site: { id: corrick.site.id, name: 'Corrick' },
+        site: {
+          id: corrick.site.id,
+          name: 'Corrick',
+          primaryHost: 'corrick.test',
+        },
         role: { id: corrick.editor.id, name: 'Editor' },
         permissions: corrick.editor.permissions,
       },
@@ -140,6 +148,24 @@ describe('POST /auth/login', () => {
     }
   });
 
+  it('[UC-SP-01] each site comes with its main web address, so the admin can link to it', async () => {
+    const { dana } = world;
+
+    const res = await login({ email: dana.email, password: TEST_PASSWORD });
+
+    // Corrick answers on corrick.test and www.corrick.test: only the main one is given. Bakery has none.
+    expect(res.status).toBe(200);
+    const hosts = (
+      res.body.memberships as {
+        site: { name: string; primaryHost: string | null };
+      }[]
+    ).map((m) => [m.site.name, m.site.primaryHost]);
+    expect(hosts).toEqual([
+      ['Bakery', null],
+      ['Corrick', 'corrick.test'],
+    ]);
+  });
+
   it('[UC-AU-03] memberships come from every site the user belongs to, and may be none', async () => {
     const { dana, chen, corrick, bakery } = world;
 
@@ -150,12 +176,16 @@ describe('POST /auth/login', () => {
     expect(asDana.status).toBe(200);
     expect(asDana.body.memberships).toEqual([
       {
-        site: { id: bakery.site.id, name: 'Bakery' },
+        site: { id: bakery.site.id, name: 'Bakery', primaryHost: null },
         role: { id: bakery.contributor.id, name: 'Contributor' },
         permissions: [Permission.ContentCreate],
       },
       {
-        site: { id: corrick.site.id, name: 'Corrick' },
+        site: {
+          id: corrick.site.id,
+          name: 'Corrick',
+          primaryHost: 'corrick.test',
+        },
         role: { id: corrick.admin.id, name: 'Admin' },
         permissions: corrick.admin.permissions,
       },
