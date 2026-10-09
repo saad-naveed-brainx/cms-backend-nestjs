@@ -63,8 +63,9 @@ reach it over REST.
   their own, and `JWT_EXPIRES_IN` defaults to `7d` (`../docs/DECISIONS.md` D-018).
 - **Pages routes** (`src/content/`): `GET` and `POST /content`, `GET` and `PATCH /content/:id`, `GET /content-types`, all with
   `X-Site-Id`. Reading is for any member, creating needs `content.create`, editing needs `content.edit_any` or `content.edit_own`
-  on a page you created. A page's address is its type's prefix plus its slug, fixed at creation; slug, parent and status change
-  only through their own tickets (CNT-03/04/05/06), and a body naming them is a 400. Lists page through `findPage` on the base
+  on a page you created. A page's address is its type's prefix plus its slug, fixed at creation; slug and parent change
+  only through their own tickets (CNT-04/05/06), and a body naming them or the status is a 400; the status changes
+  through `POST /content/:id/publish` and `/unpublish` (`content.publish`). Lists page through `findPage` on the base
   desk. Block content is stored as sent and is **not sanitised until BLK-05** (`../docs/DECISIONS.md` D-021).
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
 - **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in

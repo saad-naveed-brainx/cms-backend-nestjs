@@ -8,6 +8,7 @@ import {
 import type { AuthUser, SiteAccess } from '../auth/decorators.js';
 import { Permission } from '../auth/permission.js';
 import { ContentTypeRepository } from '../content-types/content-type.repository.js';
+import { ContentStatus } from '../database/entities/content.entity.js';
 import type { Content, ContentType } from '../database/entities/index.js';
 import type {
   CreatePageBody,
@@ -191,6 +192,52 @@ export class ContentService {
       updatedBy: user.id,
     });
     // Gone between the read and the write (trashed by someone else just now).
+    if (!updated) throw new NotFoundException('Page not found');
+    return toPage(updated, await this.typesById(access.siteId));
+  }
+
+  /**
+   * Makes the page live now. Anything not yet live (a draft, a page waiting for review, a
+   * scheduled one) becomes `published`; publishing a published page changes nothing, so the first
+   * publish time stays. Whether the person may is the route's `content.publish`.
+   */
+  async publish(
+    access: SiteAccess,
+    user: AuthUser,
+    id: string,
+  ): Promise<PageView> {
+    const page = await this.pages.findById(access.siteId, id);
+    if (!page) throw new NotFoundException('Page not found');
+    if (page.status === ContentStatus.Published) {
+      return toPage(page, await this.typesById(access.siteId));
+    }
+
+    const updated = await this.pages.update(access.siteId, id, {
+      status: ContentStatus.Published,
+      publishedAt: new Date(),
+      updatedBy: user.id,
+    });
+    if (!updated) throw new NotFoundException('Page not found');
+    return toPage(updated, await this.typesById(access.siteId));
+  }
+
+  /** Takes a published page back to `draft`. A page that is not published is a 409. */
+  async unpublish(
+    access: SiteAccess,
+    user: AuthUser,
+    id: string,
+  ): Promise<PageView> {
+    const page = await this.pages.findById(access.siteId, id);
+    if (!page) throw new NotFoundException('Page not found');
+    if (page.status !== ContentStatus.Published) {
+      throw new ConflictException('This page is not published');
+    }
+
+    const updated = await this.pages.update(access.siteId, id, {
+      status: ContentStatus.Draft,
+      publishedAt: null,
+      updatedBy: user.id,
+    });
     if (!updated) throw new NotFoundException('Page not found');
     return toPage(updated, await this.typesById(access.siteId));
   }
