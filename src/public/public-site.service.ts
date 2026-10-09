@@ -47,6 +47,8 @@ export type PublicSiteView = SiteFrame & {
     path: string;
     seoTitle: string | null;
     seoDescription: string | null;
+    /** The page's own choice of original address; `null` means its address on `canonicalHost`. */
+    canonicalUrl: string | null;
     noIndex: boolean;
     publishedAt: Date | null;
     blocks: unknown[];
@@ -203,6 +205,7 @@ export class PublicSiteService {
         path: page.path,
         seoTitle: page.seoTitle,
         seoDescription: page.seoDescription,
+        canonicalUrl: page.canonicalUrl,
         noIndex: page.noIndex,
         publishedAt: page.publishedAt,
         blocks: page.blocks,

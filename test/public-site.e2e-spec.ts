@@ -101,6 +101,7 @@ describe('a published page by address', () => {
         path: '/home',
         seoTitle: null,
         seoDescription: null,
+        canonicalUrl: null,
         noIndex: false,
         publishedAt: expect.any(String),
         blocks: [HERO, CTA],
