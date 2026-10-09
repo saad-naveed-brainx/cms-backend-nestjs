@@ -110,8 +110,8 @@ function writableFields(fields: object): Record<string, unknown> {
  * - An update cannot set the system's dates: the timestamps or the trash date (UC-SR-56).
  *
  * The TypeORM repository stays private, so a desk offers only scoped methods and nothing can
- * call an unscoped `find()` through it. No `delete` and no pagination, on purpose (plan D3):
- * trash and permanent delete come with CNT-11, list limits with CNT-01.
+ * call an unscoped `find()` through it. No `delete`, on purpose (plan D3): trash and permanent
+ * delete come with CNT-11. A desk that lists pages for a screen uses `findPage` (CNT-01).
  *
  * `Defaulted` names the entity's columns that have a database default (`status`, `blocks`), so
  * `create` may leave them out. Nullable columns are optional without being listed.
@@ -192,6 +192,30 @@ export abstract class ScopedRepository<
       order: OLDEST_FIRST as FindOptionsOrder<E>,
       withDeleted,
     });
+  }
+
+  /**
+   * For a desk's own paged lists: one page of the site's rows matching `where`, in the order the
+   * desk gives (give a tie-breaker such as `id`, or pages can repeat or skip rows), and how many
+   * rows match in all.
+   */
+  protected async findPage(
+    siteId: string,
+    where: FindOptionsWhere<E>,
+    {
+      order,
+      limit,
+      offset,
+    }: { order: FindOptionsOrder<E>; limit: number; offset: number },
+  ): Promise<{ rows: E[]; total: number }> {
+    requireSiteId(siteId);
+    const [rows, total] = await this.repository.findAndCount({
+      where: this.onSite(siteId, where),
+      order,
+      take: limit,
+      skip: offset,
+    });
+    return { rows, total };
   }
 
   /** `where` on one site. `siteId` goes last, so one inside `where` is overwritten. */
