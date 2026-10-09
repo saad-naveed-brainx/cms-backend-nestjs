@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ContentTypesModule } from '../content-types/content-types.module.js';
 import { PreviewModule } from '../preview/preview.module.js';
+import { WebsiteModule } from '../website/website.module.js';
 import { ContentTypesController } from './content-types.controller.js';
 import { ContentController } from './content.controller.js';
 import { ContentRepository } from './content.repository.js';
@@ -11,7 +12,7 @@ import { ContentService } from './content.service.js';
  * from code; nothing else reaches the table.
  */
 @Module({
-  imports: [ContentTypesModule, PreviewModule],
+  imports: [ContentTypesModule, PreviewModule, WebsiteModule],
   controllers: [ContentController, ContentTypesController],
   providers: [ContentRepository, ContentService],
   exports: [ContentRepository],

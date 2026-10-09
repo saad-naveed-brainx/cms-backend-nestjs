@@ -11,6 +11,7 @@ import { ContentTypeRepository } from '../content-types/content-type.repository.
 import { ContentStatus } from '../database/entities/content.entity.js';
 import type { Content, ContentType } from '../database/entities/index.js';
 import { PreviewTokenService } from '../preview/preview-token.service.js';
+import { WebsiteCache } from '../website/website-cache.service.js';
 import {
   refuseUncleanedBlocks,
   type CreatePageBody,
@@ -90,6 +91,7 @@ export class ContentService {
     private readonly pages: ContentRepository,
     private readonly types: ContentTypeRepository,
     private readonly previews: PreviewTokenService,
+    private readonly website: WebsiteCache,
   ) {}
 
   async listTypes(siteId: string): Promise<{ items: ContentTypeView[] }> {
@@ -212,6 +214,10 @@ export class ContentService {
     });
     // Gone between the read and the write (trashed by someone else just now).
     if (!updated) throw new NotFoundException('Page not found');
+    // A live page changed: the website must stop showing what it remembers (CNT-08). A draft is not public.
+    if (updated.status === ContentStatus.Published) {
+      await this.website.forgetSite(access.siteId);
+    }
     return toPage(updated, await this.typesById(access.siteId));
   }
 
@@ -237,6 +243,8 @@ export class ContentService {
       updatedBy: user.id,
     });
     if (!updated) throw new NotFoundException('Page not found');
+    // New on the site, and in its menu and blog page: the website forgets the whole site (CNT-08).
+    await this.website.forgetSite(access.siteId);
     return toPage(updated, await this.typesById(access.siteId));
   }
 
@@ -258,6 +266,8 @@ export class ContentService {
       updatedBy: user.id,
     });
     if (!updated) throw new NotFoundException('Page not found');
+    // Off the site, its menu and its blog page: the website forgets the whole site (CNT-08).
+    await this.website.forgetSite(access.siteId);
     return toPage(updated, await this.typesById(access.siteId));
   }
 

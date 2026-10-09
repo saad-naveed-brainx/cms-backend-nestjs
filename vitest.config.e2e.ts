@@ -21,6 +21,8 @@ export default defineConfig({
       // The app will not start without a signing secret; CI has no env file to supply one.
       JWT_SECRET:
         process.env.JWT_SECRET ?? 'test-only-jwt-secret-0123456789abcdef',
+      // Off for every test unless one turns it on, whatever a developer's .env says (CNT-08).
+      WEB_REVALIDATE_URL: '',
     },
     globalSetup: ['./test/support/global-setup.ts'],
     // One shared test database: run files one at a time so resets don't race.
