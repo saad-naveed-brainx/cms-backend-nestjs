@@ -25,14 +25,21 @@ export class WebsiteCache {
   ) {}
 
   async forgetSite(siteId: string): Promise<void> {
-    const url = this.config.get<string>('WEB_REVALIDATE_URL');
-    const secret = this.config.get<string>('REVALIDATE_SECRET');
-    if (!url || !secret) return;
-
+    if (!this.enabled()) return;
     const hosts = (await this.hostnames.findMany(siteId)).map(
       (row) => row.hostname,
     );
-    if (hosts.length === 0) return;
+    await this.forgetHosts(hosts, `site ${siteId}`);
+  }
+
+  /**
+   * The same, for addresses the caller already has: a deleted site's, which nothing remembers once
+   * it is gone (D-039). `what` names them in a warning.
+   */
+  async forgetHosts(hosts: string[], what: string): Promise<void> {
+    const url = this.config.get<string>('WEB_REVALIDATE_URL');
+    const secret = this.config.get<string>('REVALIDATE_SECRET');
+    if (!url || !secret || hosts.length === 0) return;
 
     try {
       const response = await fetch(url, {
@@ -46,13 +53,20 @@ export class WebsiteCache {
       });
       if (!response.ok) {
         this.logger.warn(
-          `The website answered ${response.status} when told to forget site ${siteId}; it expires on its own within five minutes`,
+          `The website answered ${response.status} when told to forget ${what}; it expires on its own within five minutes`,
         );
       }
     } catch (error) {
       this.logger.warn(
-        `Could not tell the website to forget site ${siteId} (${(error as Error).message}); it expires on its own within five minutes`,
+        `Could not tell the website to forget ${what} (${(error as Error).message}); it expires on its own within five minutes`,
       );
     }
+  }
+
+  private enabled(): boolean {
+    return Boolean(
+      this.config.get<string>('WEB_REVALIDATE_URL') &&
+      this.config.get<string>('REVALIDATE_SECRET'),
+    );
   }
 }
