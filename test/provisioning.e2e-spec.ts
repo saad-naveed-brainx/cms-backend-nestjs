@@ -102,7 +102,7 @@ describe('creating a tenant', () => {
       (error: unknown) => error,
     );
 
-  it('[UC-TS-01] creates the organisation, site, address, role, membership, two content types and the admin, and nothing else', async () => {
+  it('[UC-TS-01] creates the organisation, site, address, role, membership, two content types, the Home page and the admin, and nothing else', async () => {
     const password = 'orchard-opening-pass';
 
     const result = await provision(
@@ -119,6 +119,7 @@ describe('creating a tenant', () => {
       roles: 1,
       site_members: 1,
       content_types: 2,
+      content: 1,
     });
 
     // The admin: the email is lower-cased, and only a scrypt hash of the password is kept.
@@ -374,6 +375,7 @@ describe('creating a tenant', () => {
       roles: 2,
       site_members: 2,
       content_types: 4,
+      content: 2,
     });
     const after = await users.findOneByOrFail({ email: 'xena@agency.test' });
     expect(after.passwordHash).toBe(before.passwordHash);
