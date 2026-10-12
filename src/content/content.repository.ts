@@ -28,6 +28,7 @@ type PageDefaults = 'status' | 'blocks' | 'data' | 'noIndex';
 export type PageListOptions = {
   contentTypeId?: string;
   status?: ContentStatus;
+  path?: string;
   limit: number;
   offset: number;
 };
@@ -140,13 +141,14 @@ export class ContentRepository extends ScopedRepository<Content, PageDefaults> {
    */
   list(
     siteId: string,
-    { contentTypeId, status, limit, offset }: PageListOptions,
+    { contentTypeId, status, path, limit, offset }: PageListOptions,
   ): Promise<{ rows: Content[]; total: number }> {
     return this.findPage(
       siteId,
       {
         ...(contentTypeId === undefined ? {} : { contentTypeId }),
         ...(status === undefined ? {} : { status }),
+        ...(path === undefined ? {} : { path }),
       },
       { order: { updatedAt: 'DESC', id: 'DESC' }, limit, offset },
     );

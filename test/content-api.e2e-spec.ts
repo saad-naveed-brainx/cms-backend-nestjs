@@ -281,6 +281,36 @@ describe('content API', () => {
     });
   });
 
+  it('[UC-FP-02] finds the page at one address, of this site only; an address with no page gives none, and a bad one is a 400', async () => {
+    const home = await newPage(orchard.admin, 'home', { title: 'Home' });
+    await newPage(orchard.admin, 'homely');
+    await newPage(maple.admin, 'home', { title: 'Maple home' });
+
+    const list = (who: Who, query: string) =>
+      api().get(`/content${query}`).set(who.headers);
+
+    const found = await list(orchard.admin, '?path=/home').expect(200);
+    expect(found.body).toMatchObject({ total: 1 });
+    expect(found.body.items).toEqual([
+      expect.objectContaining({ id: home.id, path: '/home', title: 'Home' }),
+    ]);
+    expect(
+      (await list(orchard.admin, '?path=/home&status=published').expect(200))
+        .body.total,
+    ).toBe(0);
+    expect(
+      (await list(orchard.admin, '?path=/nowhere').expect(200)).body.items,
+    ).toEqual([]);
+
+    for (const bad of ['home', '/home page', `/${'a'.repeat(300)}`]) {
+      const res = await list(
+        orchard.admin,
+        `?path=${encodeURIComponent(bad)}`,
+      ).expect(400);
+      expect(res.body.errors.join(), bad).toContain('path');
+    }
+  });
+
   it('[UC-CA-04] reads one page with its blocks and data; an unknown or malformed id is a 404', async () => {
     const page = await newPage(orchard.admin, 'about', {
       blocks: [{ type: 'text', props: { body: 'Hello' } }],

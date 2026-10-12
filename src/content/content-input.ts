@@ -90,6 +90,12 @@ export const updatePageBody = z
 export const listQuery = z.object({
   type: typeSlug.optional(),
   status: z.enum(ContentStatus).optional(),
+  /** One address exactly (`/home`): how the admin finds the site's front page (D-037). */
+  path: z
+    .string()
+    .max(300)
+    .regex(/^\/[A-Za-z0-9/-]*$/, 'use an address on the site, like /home')
+    .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),
 });
