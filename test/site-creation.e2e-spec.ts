@@ -126,6 +126,78 @@ describe('creating a site', () => {
     });
   });
 
+  it("[UC-FP-01] a new site starts with a published Home page holding its name, shown at / and kept out of the menu, and it is the site's own", async () => {
+    const { api, orchard, maple, dataSource } = world;
+    const homePages = (siteId: string) =>
+      dataSource.query(
+        `SELECT title, slug, path, status, published_at IS NOT NULL AS published, blocks, created_by
+           FROM content WHERE site_id = $1`,
+        [siteId],
+      );
+
+    // A provisioned tenant (the seed command's way) has one, written by its first admin.
+    expect(await homePages(orchard.siteId)).toEqual([
+      {
+        title: 'Home',
+        slug: 'home',
+        path: '/home',
+        status: 'published',
+        published: true,
+        blocks: [{ type: 'hero', headline: 'Orchard Bakery' }],
+        created_by: orchard.admin.userId,
+      },
+    ]);
+
+    // A site added from the admin has one too, at / on its address, and not in its own menu.
+    const res = await createSite(orchard.admin, {
+      name: 'Harbour Deli',
+      hostnames: ['deli.test'],
+    }).expect(201);
+    const siteId = res.body.site.id as string;
+    const front = await api()
+      .get('/public/site?host=deli.test&path=/')
+      .expect(200);
+    expect(front.body).toMatchObject({
+      kind: 'page',
+      site: { name: 'Harbour Deli' },
+      page: {
+        title: 'Home',
+        path: '/home',
+        blocks: [{ type: 'hero', headline: 'Harbour Deli' }],
+      },
+      navigation: [],
+    });
+
+    // It is an ordinary page of the new site: listed, and edited through the usual route.
+    const headers = { ...signedIn(orchard.admin), 'X-Site-Id': siteId };
+    const list = await api().get('/content').set(headers).expect(200);
+    expect(list.body.items).toEqual([
+      expect.objectContaining({
+        title: 'Home',
+        path: '/home',
+        status: 'published',
+      }),
+    ]);
+    const blocks = [{ type: 'hero', headline: 'Fresh fish daily' }];
+    await api()
+      .patch(`/content/${list.body.items[0].id}`)
+      .set(headers)
+      .send({ blocks })
+      .expect(200);
+    const edited = await api()
+      .get('/public/site?host=deli.test&path=/')
+      .expect(200);
+    expect(edited.body.page.blocks).toEqual(blocks);
+
+    // Each site holds only its own Home page.
+    expect(
+      (await homePages(maple.siteId)).map(
+        (page: { blocks: unknown }) => page.blocks,
+      ),
+    ).toEqual([[{ type: 'hero', headline: 'Maple Books' }]]);
+    expect(await homePages(siteId)).toHaveLength(1);
+  });
+
   it('[UC-RS-09] which organisation: the only one you own, the one you name, and never one that is not yours', async () => {
     const { orchard, maple, dataSource } = world;
 

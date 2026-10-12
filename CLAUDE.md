@@ -59,6 +59,9 @@ reach it over REST.
   owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
   an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
   `createTenant`, so a site made here and one made by the seed command are the same. It calls `invalidateSite` (below).
+- **Every new site starts with a published Home page** (`../docs/DECISIONS.md` D-037): the Page at `/home` (what the
+  website shows at `/`), whose only block is a hero with the site's name, written in the same transaction as the site's
+  other rows. Tests that count rows or list a new site's pages see it; most public-site tests delete all content first.
 - **The public website reads `GET /public/site?host=&path=&page=`** (`src/public/`, no token): the site comes from the host;
   the answer is the published page at `path` (`kind: 'page'`; `/` is the page at `/home`), with its search fields, or, at a type's own address with
   no page there (`/blog` for posts), that type's published items newest first, ten at a time (`kind: 'listing'`, `page`

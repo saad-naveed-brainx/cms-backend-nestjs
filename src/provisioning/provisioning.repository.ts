@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, QueryFailedError, type EntityManager } from 'typeorm';
 import { Permission } from '../auth/permission.js';
+import { ContentStatus } from '../database/entities/content.entity.js';
 import {
+  Content,
   ContentType,
   Hostname,
   Organization,
@@ -10,6 +12,7 @@ import {
   SiteMember,
   User,
 } from '../database/entities/index.js';
+import { HOME_PATH } from '../public/public-path.js';
 import {
   HostnameTakenError,
   NotOrganizationOwnerError,
@@ -66,6 +69,9 @@ const BUILT_IN_CONTENT_TYPES = [
   },
 ];
 
+/** The site's front page (D-037): the Page at `/home`, as the website shows it at `/`. */
+const HOME_PAGE = { title: 'Home', slug: 'home', path: HOME_PATH };
+
 /** Postgres' code for a unique violation, and the name the migration gives the address rule. */
 const UNIQUE_VIOLATION = '23505';
 const ADDRESS_UNIQUE_CONSTRAINT = 'hostnames_hostname_key';
@@ -76,9 +82,9 @@ const ADDRESS_UNIQUE_CONSTRAINT = 'hostnames_hostname_key';
  *
  * It exists because a tenant is built before there is a site to scope to. It inserts rows no site
  * owns yet (the user, the organisation, the site itself) and then the site's own rows (addresses,
- * role, membership, content types), and all of it must succeed or fail together. A scoped desk
- * needs a `siteId` that does not exist yet, and no transaction object leaves a desk, so several
- * desks cannot share one transaction (docs/DECISIONS.md D-015, D-019).
+ * role, membership, content types, the Home page), and all of it must succeed or fail together. A
+ * scoped desk needs a `siteId` that does not exist yet, and no transaction object leaves a desk, so
+ * several desks cannot share one transaction (docs/DECISIONS.md D-015, D-019).
  *
  * Kept narrow on purpose:
  * - It only creates. It reads nothing for anyone else, updates nothing and deletes nothing, and
@@ -95,7 +101,8 @@ export class ProvisioningRepository {
   /**
    * Creates the user (or finds the existing one), the organisation they own, a site in it, its
    * addresses, an `Administrator` role with every permission, the user's membership with it, and
-   * the Page and Post content types, in one transaction: any failure undoes all of it.
+   * the Page and Post content types and the published Home page, in one transaction: any failure
+   * undoes all of it.
    *
    * An address another site already holds is a `HostnameTakenError` naming it. Any other error
    * propagates as it is.
@@ -129,9 +136,10 @@ export class ProvisioningRepository {
 
   /**
    * Adds a site to an organisation the person owns: the site, its addresses, an `Administrator`
-   * role with every permission, the person's membership with it, and the Page and Post content
-   * types, in one transaction. Ownership is checked inside the transaction, so a site can never be
-   * added to someone else's organisation, even by a caller's mistake (`NotOrganizationOwnerError`).
+   * role with every permission, the person's membership with it, the Page and Post content types
+   * and the published Home page, in one transaction. Ownership is checked inside the transaction,
+   * so a site can never be added to someone else's organisation, even by a caller's mistake
+   * (`NotOrganizationOwnerError`).
    * An address another site already holds is a `HostnameTakenError` naming it. Every error undoes
    * all of it.
    */
@@ -150,8 +158,9 @@ export class ProvisioningRepository {
 /**
  * The rows every new site starts with, written inside the caller's transaction: the site (empty
  * theme and settings), its addresses (the first primary), an `Administrator` role holding every
- * permission, the person's membership with that role, and the built-in content types. Every
- * site-owned row carries the id of the site just created.
+ * permission, the person's membership with that role, the built-in content types, and a published
+ * Home page whose only block is a hero with the site's name, so the site's `/` is never empty
+ * (D-037). Every site-owned row carries the id of the site just created.
  */
 async function createSiteRows(
   manager: EntityManager,
@@ -188,16 +197,35 @@ async function createSiteRows(
     }),
   );
 
+  const types: ContentType[] = [];
   for (const definition of BUILT_IN_CONTENT_TYPES) {
-    await manager.save(
-      manager.create(ContentType, {
-        ...definition,
-        siteId: site.id,
-        fields: [],
-        isBuiltin: true,
-      }),
+    types.push(
+      await manager.save(
+        manager.create(ContentType, {
+          ...definition,
+          siteId: site.id,
+          fields: [],
+          isBuiltin: true,
+        }),
+      ),
     );
   }
+
+  const pageType = types.find((type) => type.slug === 'page')!;
+  await manager.save(
+    manager.create(Content, {
+      ...HOME_PAGE,
+      siteId: site.id,
+      contentTypeId: pageType.id,
+      parentId: null,
+      status: ContentStatus.Published,
+      publishedAt: new Date(),
+      blocks: [{ type: 'hero', headline: data.siteName }],
+      data: {},
+      createdBy: data.userId,
+      updatedBy: data.userId,
+    }),
+  );
 
   return { siteId: site.id, roleId: role.id };
 }
