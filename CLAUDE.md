@@ -59,6 +59,11 @@ reach it over REST.
   owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
   an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
   `createTenant`, so a site made here and one made by the seed command are the same. It calls `invalidateSite` (below).
+- **Deleting a site** is `DELETE /sites/:id` (`src/site-removal/`, `../docs/DECISIONS.md` D-039): signed in, no `X-Site-Id`; only the
+  owner of the site's organisation (a member who is not is a 403, anyone else a 404). `SiteRemovalRepository` is the third
+  unscoped desk and the only one that deletes a site: one transaction, the owner checked inside it, the site's row
+  deleted so every site-owned row cascades. Then `invalidateSite` and `WebsiteCache.forgetHosts` with the addresses read
+  before the delete (nothing remembers them afterwards).
 - **Every new site starts with a published Home page** (`../docs/DECISIONS.md` D-037): the Page at `/home` (what the
   website shows at `/`), whose only block is a hero with the site's name, written in the same transaction as the site's
   other rows. Tests that count rows or list a new site's pages see it; most public-site tests delete all content first.

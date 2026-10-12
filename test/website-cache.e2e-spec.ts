@@ -150,4 +150,31 @@ describe('telling the website to forget a site', () => {
       process.env.WEB_REVALIDATE_URL = saved;
     }
   });
+
+  it('[UC-SD-03] deleting a site tells the website to forget every address it had; a refused delete tells nobody', async () => {
+    const { admin } = world.orchard;
+    const auth = { Authorization: admin.headers.Authorization };
+    const made = await api()
+      .post('/sites')
+      .set(auth)
+      .send({ name: 'Harbour Deli', hostnames: ['deli.test', 'www.deli.test'] })
+      .expect(201);
+    const siteId = made.body.site.id as string;
+    told = [];
+
+    await api()
+      .delete(`/sites/${siteId}`)
+      .set({ Authorization: world.maple.admin.headers.Authorization })
+      .expect(404);
+    expect(told).toEqual([]);
+
+    await api().delete(`/sites/${siteId}`).set(auth).expect(204);
+    expect(told).toHaveLength(1);
+    expect(told[0]).toMatchObject({
+      method: 'POST',
+      path: '/api/revalidate',
+      authorization: `Bearer ${SECRET}`,
+      body: { hosts: ['deli.test', 'www.deli.test'] },
+    });
+  });
 });

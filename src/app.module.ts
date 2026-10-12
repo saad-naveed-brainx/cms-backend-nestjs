@@ -12,6 +12,7 @@ import { HostnamesModule } from './hostnames/hostnames.module.js';
 import { PlatformModule } from './platform/platform.module.js';
 import { ProvisioningModule } from './provisioning/provisioning.module.js';
 import { PublicModule } from './public/public.module.js';
+import { SiteRemovalModule } from './site-removal/site-removal.module.js';
 import { SitesModule } from './sites/sites.module.js';
 
 @Module({
@@ -26,6 +27,7 @@ import { SitesModule } from './sites/sites.module.js';
     PlatformModule,
     ProvisioningModule,
     PublicModule,
+    SiteRemovalModule,
     HostnamesModule,
     SitesModule,
   ],
