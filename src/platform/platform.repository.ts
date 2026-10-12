@@ -24,6 +24,8 @@ export type UserMembership = {
     theme: Record<string, unknown>;
   };
   role: { id: string; name: string; permissions: Permission[] };
+  /** Whether the user owns the organisation the site belongs to: who may delete it (D-039). */
+  ownsOrganization: boolean;
 };
 
 /**
@@ -116,6 +118,11 @@ export class PlatformRepository {
         'hostname',
         'hostname.siteId = site.id AND hostname.isPrimary = true',
       )
+      .innerJoin(
+        Organization,
+        'organization',
+        'organization.id = site.organizationId',
+      )
       .select('site.id', 'siteId')
       .addSelect('site.name', 'siteName')
       .addSelect('hostname.hostname', 'primaryHost')
@@ -124,6 +131,7 @@ export class PlatformRepository {
       .addSelect('role.name', 'roleName')
       // `pg` hands an enum array back as the text `{a,b}`; as text[] it arrives as an array.
       .addSelect('"role"."permissions"::text[]', 'permissions')
+      .addSelect('"organization"."owner_id" = :userId', 'ownsOrganization')
       .where('member.userId = :userId', { userId })
       .orderBy('site.name', 'ASC')
       .addOrderBy('site.id', 'ASC')
@@ -157,6 +165,7 @@ type MembershipRow = {
   roleId: string;
   roleName: string;
   permissions: Permission[];
+  ownsOrganization: boolean;
 };
 
 function toMembership(row: MembershipRow): UserMembership {
@@ -172,5 +181,6 @@ function toMembership(row: MembershipRow): UserMembership {
       name: row.roleName,
       permissions: row.permissions,
     },
+    ownsOrganization: row.ownsOrganization,
   };
 }

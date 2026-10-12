@@ -186,4 +186,21 @@ describe('deleting a site', () => {
     await api().get('/sites/resolve?host=annex.test').expect(200);
     await deleteSite(orchard.admin, siteId).expect(204);
   });
+
+  it('[UC-SD-04] sign-in says, for each site, whether the person owns its organisation, so the admin offers Delete only there', async () => {
+    const { api, orchard, maple } = world;
+    const me = async (who: Who) =>
+      (await api().get('/auth/me').set(signedIn(who)).expect(200)).body
+        .memberships as { site: { name: string }; ownsOrganization: boolean }[];
+
+    expect(
+      (await me(orchard.admin)).map((m) => [m.site.name, m.ownsOrganization]),
+    ).toEqual([['Orchard Bakery', true]]);
+    expect(
+      (await me(orchard.editor)).map((m) => [m.site.name, m.ownsOrganization]),
+    ).toEqual([['Orchard Bakery', false]]);
+    expect(
+      (await me(maple.admin)).map((m) => [m.site.name, m.ownsOrganization]),
+    ).toEqual([['Maple Books', true]]);
+  });
 });
