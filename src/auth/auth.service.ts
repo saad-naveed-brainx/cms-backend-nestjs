@@ -14,6 +14,8 @@ export type Membership = {
   };
   role: { id: string; name: string };
   permissions: Permission[];
+  /** Whether the user owns the site's organisation, so may delete the site (D-039). */
+  ownsOrganization: boolean;
 };
 
 type PublicUser = { id: string; email: string; name: string };
@@ -80,10 +82,11 @@ export class AuthService {
 
   private async memberships(userId: string): Promise<Membership[]> {
     const rows = await this.platform.findMembershipsByUserId(userId);
-    return rows.map(({ site, role }) => ({
+    return rows.map(({ site, role, ownsOrganization }) => ({
       site,
       role: { id: role.id, name: role.name },
       permissions: role.permissions,
+      ownsOrganization,
     }));
   }
 }

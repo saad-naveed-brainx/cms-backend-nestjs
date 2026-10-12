@@ -44,7 +44,8 @@ reach it over REST.
   the unscoped desk for reads: it extends nothing and reads across sites only by address or by user
   (host → site, email or id → user, user → their memberships, which also reads `site_members`, `roles` and each site's primary
   hostname and theme, which sign-in returns as `site.primaryHost` and `site.theme` (stored as is, `{}` for a new site) so the
-  admin can link to the site and draw its live preview, and
+  admin can link to the site and draw its live preview, and `ownsOrganization` (the user owns the site's organisation, so
+  may delete it, D-039), and
   user → the organisations they own). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).

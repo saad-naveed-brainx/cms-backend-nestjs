@@ -90,6 +90,7 @@ describe('POST /auth/login', () => {
         },
         role: { id: corrick.editor.id, name: 'Editor' },
         permissions: [Permission.ContentCreate, Permission.ContentPublish],
+        ownsOrganization: false,
       },
     ]);
 
@@ -135,6 +136,7 @@ describe('POST /auth/login', () => {
         },
         role: { id: corrick.editor.id, name: 'Editor' },
         permissions: corrick.editor.permissions,
+        ownsOrganization: false,
       },
     ]);
     expect(decodeJwt(res.body.accessToken).sub).toBe(ayesha.id);
@@ -207,6 +209,7 @@ describe('POST /auth/login', () => {
         },
         role: { id: bakery.contributor.id, name: 'Contributor' },
         permissions: [Permission.ContentCreate],
+        ownsOrganization: false,
       },
       {
         site: {
@@ -217,6 +220,7 @@ describe('POST /auth/login', () => {
         },
         role: { id: corrick.admin.id, name: 'Admin' },
         permissions: corrick.admin.permissions,
+        ownsOrganization: false,
       },
     ]);
 

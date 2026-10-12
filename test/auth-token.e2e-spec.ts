@@ -65,6 +65,7 @@ describe('GET /auth/me and the token guard', () => {
           },
           role: { id: corrick.editor.id, name: 'Editor' },
           permissions: [Permission.ContentCreate, Permission.ContentPublish],
+          ownsOrganization: false,
         },
       ],
     });
@@ -105,6 +106,7 @@ describe('GET /auth/me and the token guard', () => {
           },
           role: { id: corrick.editor.id, name: 'Editor' },
           permissions: changed,
+          ownsOrganization: false,
         },
       ],
     });
