@@ -128,6 +128,7 @@ export class ContentService {
     const { rows, total } = await this.pages.list(siteId, {
       contentTypeId,
       status: query.status,
+      path: query.path,
       limit: query.limit,
       offset: query.offset,
     });

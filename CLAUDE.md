@@ -104,7 +104,7 @@ reach it over REST.
   create and edit and come back with the page, not in list rows: `seoTitle` (up to 200 characters), `seoDescription` (500),
   `canonicalUrl` (a full `https://` or `http://` address, 2000) and `noIndex`; an empty text clears one. The share image
   (`ogImageId`) is refused until the media library. Lists page through `findPage` on the base
-  desk. Block content is stored as sent and is **not sanitised until BLK-05**, so a `richText` block is refused (400) on create
+  desk; `GET /content` filters by `type`, `status` and `path` (one exact address, how the admin finds `/home`). Block content is stored as sent and is **not sanitised until BLK-05**, so a `richText` block is refused (400) on create
   and edit until then; one a page already holds may stay exactly as it is (`../docs/DECISIONS.md` D-021).
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
 - **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in
