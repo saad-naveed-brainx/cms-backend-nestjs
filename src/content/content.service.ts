@@ -12,8 +12,8 @@ import { ContentStatus } from '../database/entities/content.entity.js';
 import type { Content, ContentType } from '../database/entities/index.js';
 import { PreviewTokenService } from '../preview/preview-token.service.js';
 import { WebsiteCache } from '../website/website-cache.service.js';
+import { cleanBlocks } from './clean-blocks.js';
 import {
-  refuseUncleanedBlocks,
   type CreatePageBody,
   type ListQuery,
   type UpdatePageBody,
@@ -166,7 +166,7 @@ export class ContentService {
     user: AuthUser,
     body: CreatePageBody,
   ): Promise<PageView> {
-    refuseUncleanedBlocks(body.blocks ?? []);
+    const blocks = cleanBlocks(body.blocks ?? []);
     const type = await this.types.findBySlug(access.siteId, body.type);
     if (!type) {
       throw new BadRequestException({
@@ -182,7 +182,7 @@ export class ContentService {
         title: body.title,
         slug: body.slug,
         path: addressFor(type.urlPrefix, body.slug),
-        blocks: body.blocks ?? [],
+        blocks,
         data: body.data ?? {},
         seoTitle: body.seoTitle ?? null,
         seoDescription: body.seoDescription ?? null,
@@ -219,10 +219,10 @@ export class ContentService {
       (access.permissions.includes(Permission.ContentEditOwn) &&
         page.createdBy === user.id);
     if (!mayEdit) throw new ForbiddenException();
-    if (body.blocks) refuseUncleanedBlocks(body.blocks, page.blocks);
 
     const updated = await this.pages.update(access.siteId, id, {
       ...body,
+      ...(body.blocks ? { blocks: cleanBlocks(body.blocks) } : {}),
       updatedBy: user.id,
     });
     // Gone between the read and the write (trashed by someone else just now).
