@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { testDatabaseUrl } from './test/support/test-database.js';
 
@@ -23,6 +25,9 @@ export default defineConfig({
         process.env.JWT_SECRET ?? 'test-only-jwt-secret-0123456789abcdef',
       // Off for every test unless one turns it on, whatever a developer's .env says (CNT-08).
       WEB_REVALIDATE_URL: '',
+      // Uploaded pictures go to a folder of the tests' own, never the developer's uploads (MED-01).
+      MEDIA_DIR: join(tmpdir(), 'cms-api-test-media'),
+      MEDIA_PUBLIC_URL: 'http://media.test/uploads',
     },
     globalSetup: ['./test/support/global-setup.ts'],
     // One shared test database: run files one at a time so resets don't race.
