@@ -65,6 +65,14 @@ reach it over REST.
   unscoped desk and the only one that deletes a site: one transaction, the owner checked inside it, the site's row
   deleted so every site-owned row cascades. Then `invalidateSite` and `WebsiteCache.forgetHosts` with the addresses read
   before the delete (nothing remembers them afterwards).
+- **The media library** (`src/media/`, MED-01/02, `../docs/DECISIONS.md` D-042): `POST /media` (`media.upload`, `X-Site-Id`,
+  multipart field `file`, at most 10 MB, else 413) and `GET /media?limit=&offset=` (any member, newest first). sharp decides
+  what the file really is (JPEG, PNG or WebP only; anything else, an SVG or over 50 megapixels is a 400), turns it upright,
+  scales it to 2400 pixels at most and writes it again, which drops the camera's details; a 480-pixel WebP `-thumb` sits
+  beside it. Files are `MEDIA_DIR/<site id>/<uuid>.<ext>` (default `uploads/`, gitignored), served publicly by
+  `GET /uploads/:siteId/:name` (only names the API writes; a year's `immutable` cache). The answer's `url`/`thumbUrl` are
+  `MEDIA_PUBLIC_URL` plus the key (default `http://localhost:<API_PORT>/uploads`; live, the API's public address), and that
+  full address is what blocks store. Deleting a site removes its folder. The API tests use their own `MEDIA_DIR`.
 - **Every new site starts with a published Home page** (`../docs/DECISIONS.md` D-037): the Page at `/home` (what the
   website shows at `/`), whose only block is a hero with the site's name, written in the same transaction as the site's
   other rows. Tests that count rows or list a new site's pages see it; most public-site tests delete all content first.
