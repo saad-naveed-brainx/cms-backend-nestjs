@@ -70,7 +70,7 @@ function toPage(page: Content, types: Map<string, ContentType>) {
   };
 }
 
-function toTypeView(type: ContentType) {
+export function toTypeView(type: ContentType) {
   return {
     id: type.id,
     slug: type.slug,

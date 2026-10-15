@@ -6,6 +6,7 @@ import { ContentTypesController } from './content-types.controller.js';
 import { ContentController } from './content.controller.js';
 import { ContentRepository } from './content.repository.js';
 import { ContentService } from './content.service.js';
+import { ContentTypesService } from './content-types.service.js';
 
 /**
  * The pages desk and the routes on top of it (CNT-01). Import this module to read or write pages
@@ -14,7 +15,7 @@ import { ContentService } from './content.service.js';
 @Module({
   imports: [ContentTypesModule, PreviewModule, WebsiteModule],
   controllers: [ContentController, ContentTypesController],
-  providers: [ContentRepository, ContentService],
+  providers: [ContentRepository, ContentService, ContentTypesService],
   exports: [ContentRepository],
 })
 export class ContentModule {}

@@ -73,6 +73,12 @@ reach it over REST.
   `GET /uploads/:siteId/:name` (only names the API writes; a year's `immutable` cache). The answer's `url`/`thumbUrl` are
   `MEDIA_PUBLIC_URL` plus the key (default `http://localhost:<API_PORT>/uploads`; live, the API's public address), and that
   full address is what blocks store. Deleting a site removes its folder. The API tests use their own `MEDIA_DIR`.
+- **Making a content type** (`POST /content-types`, `content_types.manage`, `X-Site-Id`; `src/content/content-types.service.ts`,
+  TYP-01 minimum, `../docs/DECISIONS.md` D-043): `{ name, urlPrefix }` only (`Recipe`, `/recipes`: one lower-case word or
+  hyphenated words). The key is made from the name (`team-member`); a name or address another type has, or an address a
+  page has, is a 409; `/api` and `/home` are kept for the website. No fields, editing or deleting. Nothing else is needed for
+  it to work: items are made with `POST /content` (`type: 'recipe'`) at `/recipes/<slug>`, and the public route already
+  lists any type with an address at that address and links it in the menu once something is published (CNT-13).
 - **Every new site starts with a published Home page** (`../docs/DECISIONS.md` D-037): the Page at `/home` (what the
   website shows at `/`), whose only block is a hero with the site's name, written in the same transaction as the site's
   other rows. Tests that count rows or list a new site's pages see it; most public-site tests delete all content first.
@@ -111,7 +117,7 @@ reach it over REST.
   (`@SiteScoped()`, `@RequirePermission(...)`) also needs the `X-Site-Id` header. Permissions are looked up per
   request, not read from the token. `JWT_SECRET` must be set (32+ characters in production); the test configs set
   their own, and `JWT_EXPIRES_IN` defaults to `7d` (`../docs/DECISIONS.md` D-018).
-- **Pages routes** (`src/content/`): `GET` and `POST /content`, `GET` and `PATCH /content/:id`, `GET /content-types`, all with
+- **Pages routes** (`src/content/`): `GET` and `POST /content`, `GET` and `PATCH /content/:id`, `GET` (and, above, `POST`) `/content-types`, all with
   `X-Site-Id`. Reading is for any member, creating needs `content.create`, editing needs `content.edit_any` or `content.edit_own`
   on a page you created. A page's address is its type's prefix plus its slug, fixed at creation; slug and parent change
   only through their own tickets (CNT-04/05/06), and a body naming them or the status is a 400; the status changes
