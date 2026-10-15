@@ -1,0 +1,279 @@
+{
+  "organization": "Kettle & Crumb Ltd",
+  "site": "Kettle & Crumb",
+  "address": "kettle-and-crumb",
+  "appearance": {
+    "tagline": "Bakery & café · since 2009",
+    "footerNote": "14 Quay Street, by the harbour · Open Tuesday to Sunday, 7am to 4pm · hello@kettleandcrumb.example",
+    "logo": "logo.png",
+    "theme": {
+      "typeSet": "editorial",
+      "shape": "soft",
+      "density": "comfortable",
+      "texture": "grain",
+      "palette": {
+        "paper": "#fbf6ee",
+        "surface": "#ffffff",
+        "ink": "#2b1d14",
+        "muted": "#6a5444",
+        "line": "#e6d8c3",
+        "brand": "#8a3b12",
+        "onBrand": "#ffffff",
+        "accent": "#8f5a00"
+      }
+    }
+  },
+  "pictures": ["shop.jpg", "sourdough.jpg", "croissants.jpg", "cafe.jpg", "coffee.jpg", "kneading.jpg", "pastries.jpg", "rye.jpg", "logo.png"],
+  "types": [{ "name": "Recipe", "urlPrefix": "/recipes" }],
+  "items": [
+    {
+      "type": "page",
+      "slug": "home",
+      "title": "Home",
+      "seoTitle": "Kettle & Crumb — sourdough bakery and café by the harbour",
+      "seoDescription": "Slow-fermented sourdough, butter croissants and proper coffee, baked every morning on Quay Street.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Bakery & café on Quay Street",
+          "headline": "Bread worth getting up early for",
+          "body": "Slow-fermented sourdough, flaky pastries and proper coffee, baked every morning a few steps from the harbour.",
+          "primaryAction": { "label": "See what we bake", "href": "/recipes" },
+          "secondaryAction": { "label": "Visit us", "href": "/visit-us" },
+          "image": { "src": "picture:shop.jpg", "alt": "The bakery counter at dawn, shelves full of fresh loaves" },
+          "facts": [
+            { "label": "Loaves a day", "value": "40+" },
+            { "label": "Fermented for", "value": "48 hours" },
+            { "label": "Baking since", "value": "2009" }
+          ]
+        },
+        {
+          "type": "imageText",
+          "heading": "Sourdough, the slow way",
+          "body": "Our country loaf takes two days: a long, cold rise for flavour, a hot stone oven for the crust. No shortcuts, no improvers, just flour, water, salt and time.",
+          "image": { "src": "picture:sourdough.jpg", "alt": "A sourdough loaf cut open to show its open crumb" },
+          "imagePosition": "right",
+          "action": { "label": "Read our story", "href": "/our-story" }
+        },
+        {
+          "type": "featureGrid",
+          "heading": "On the counter every morning",
+          "intro": "Baked from 4am and gone by early afternoon. Come early for the croissants.",
+          "items": [
+            { "label": "Daily", "title": "Country sourdough", "body": "Our everyday loaf: a crackling crust and a mild, creamy crumb." },
+            { "label": "Daily", "title": "Seeded rye", "body": "Dense, dark and full of sunflower and pumpkin seeds. Keeps for a week." },
+            { "label": "Daily", "title": "Butter croissants", "body": "Laminated over three days with cultured butter." },
+            { "label": "Weekends", "title": "Cardamom buns", "body": "A Saturday tradition, knotted by hand and glazed while warm." }
+          ]
+        },
+        {
+          "type": "imageText",
+          "heading": "A café to stay a while",
+          "body": "Twenty seats, long tables and coffee from a roaster down the road. Bring a book, bring the dog, stay as long as you like.",
+          "image": { "src": "picture:cafe.jpg", "alt": "The café's warm interior with wooden tables and chairs" },
+          "imagePosition": "left",
+          "action": { "label": "Opening hours", "href": "/visit-us" }
+        },
+        {
+          "type": "testimonial",
+          "quote": "The best rye I have had outside Copenhagen. I come for the bread and stay for the second coffee.",
+          "attribution": "Maya Reid",
+          "role": "Regular since 2015"
+        },
+        {
+          "type": "cta",
+          "heading": "Baking for a gathering?",
+          "body": "Celebration cakes, platters of pastries and bread for the whole table.",
+          "action": { "label": "Email us your order", "href": "mailto:hello@kettleandcrumb.example" },
+          "note": "We need 48 hours’ notice for larger orders."
+        }
+      ]
+    },
+    {
+      "type": "page",
+      "slug": "our-story",
+      "title": "Our story",
+      "seoDescription": "How a home baker’s starter became a bakery and café on Quay Street.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Our story",
+          "headline": "It started with one jar of starter",
+          "body": "Fifteen years, four ovens and a great many loaves later, the starter is still alive and still fed every morning.",
+          "image": { "src": "picture:kneading.jpg", "alt": "Hands kneading dough on a floured table" }
+        },
+        {
+          "type": "richText",
+          "heading": "From a home kitchen to Quay Street",
+          "html": "<p>Kettle &amp; Crumb began in 2009 as a Saturday stall: forty loaves, a borrowed table and a queue that grew every week. Within two years we had a small shop on Quay Street, and a bakery behind it with a stone-floored oven we still use today.</p><p>We bake the way bread used to be made. Our doughs ferment slowly, for up to forty-eight hours, which gives them their flavour and makes them easier to digest. We buy our flour from a mill an hour away and our butter from a dairy along the coast.</p><h3>What we believe</h3><ul><li><strong>Time is an ingredient.</strong> Nothing is rushed.</li><li><strong>Local where we can.</strong> Flour, butter, eggs and fruit from nearby farms.</li><li><strong>Nothing goes to waste.</strong> Yesterday’s bread becomes today’s croutons, puddings and toast.</li></ul>"
+        },
+        {
+          "type": "imageText",
+          "heading": "The night shift",
+          "body": "Our bakers start at 4am so the shelves are full by 7. If you walk past early, knock on the window: there is usually something warm to try.",
+          "image": { "src": "picture:pastries.jpg", "alt": "Trays of freshly baked pastries" },
+          "imagePosition": "right"
+        }
+      ]
+    },
+    {
+      "type": "page",
+      "slug": "visit-us",
+      "title": "Visit us",
+      "seoDescription": "Find Kettle & Crumb at 14 Quay Street. Opening hours, ordering and how to reach us.",
+      "blocks": [
+        {
+          "type": "richText",
+          "heading": "Opening hours",
+          "html": "<ul><li><strong>Tuesday to Friday:</strong> 7am to 4pm</li><li><strong>Saturday and Sunday:</strong> 8am to 4pm</li><li><strong>Monday:</strong> closed, the ovens get a rest</li></ul><p>We bake until we sell out, so the best choice is in the morning.</p>"
+        },
+        {
+          "type": "richText",
+          "heading": "Finding us",
+          "html": "<p>14 Quay Street, on the corner by the harbour steps. Street parking is free after 6pm and all day Sunday, and the number 4 bus stops right outside.</p><p>Questions, wholesale or orders: <a href=\"mailto:hello@kettleandcrumb.example\">hello@kettleandcrumb.example</a> or <a href=\"tel:+441234567890\">01234 567890</a>.</p>"
+        },
+        {
+          "type": "cta",
+          "heading": "Bread for your café or restaurant?",
+          "body": "We deliver to a dozen kitchens around town every morning.",
+          "action": { "label": "Ask about wholesale", "href": "mailto:hello@kettleandcrumb.example" }
+        }
+      ]
+    },
+    {
+      "type": "post",
+      "slug": "why-our-sourdough-takes-two-days",
+      "title": "Why our sourdough takes two days",
+      "seoDescription": "A long, cold fermentation is the secret behind our country loaf. Here is what happens in those 48 hours.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "From the bakery",
+          "headline": "Why our sourdough takes two days",
+          "image": { "src": "picture:sourdough.jpg", "alt": "A sourdough loaf cut open to show its crumb" }
+        },
+        {
+          "type": "richText",
+          "html": "<p>People often ask why a loaf of ours costs more than one from the supermarket. The honest answer is time. Every country loaf spends two days with us before it reaches the shelf.</p><h2>Day one: the mix</h2><p>We feed our starter in the morning and mix the dough in the afternoon: flour, water, salt and starter, nothing else. Then it rests in the cool of the bakery overnight, slowly fermenting.</p><h2>Day two: shape and bake</h2><p>At 4am the dough is shaped by hand and baked in a stone-floored oven at 250°C. The long rest gives the crust its colour and the crumb its gentle tang.</p><blockquote><p>Slow bread is easier to digest and stays fresh for days.</p></blockquote><p>Try a loaf on a Tuesday and it will still make perfect toast on Saturday.</p>"
+        }
+      ]
+    },
+    {
+      "type": "post",
+      "slug": "meet-the-night-shift",
+      "title": "Meet the night shift",
+      "seoDescription": "While the town sleeps, three bakers fill our shelves. Meet Tom, Ines and Sami.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Our people",
+          "headline": "Meet the night shift",
+          "image": { "src": "picture:kneading.jpg", "alt": "A baker kneading dough" }
+        },
+        {
+          "type": "richText",
+          "html": "<p>Most of our customers never meet the people who bake their bread. They start work at 4am, finish just after lunch and are usually asleep by the time the café is busiest.</p><ul><li><strong>Tom</strong> has been with us since the market stall and still shapes every rye loaf by hand.</li><li><strong>Ines</strong> runs pastry. Her croissants take three days and she will not hurry them.</li><li><strong>Sami</strong> joined as an apprentice last year and now bakes our weekend cardamom buns.</li></ul><p>If you are passing early, wave through the window. They will wave back.</p>"
+        }
+      ]
+    },
+    {
+      "type": "post",
+      "slug": "autumn-on-the-counter",
+      "title": "Autumn on the counter",
+      "seoDescription": "Spiced buns, pear and almond tarts and a new seeded loaf: what is new for autumn.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Seasonal",
+          "headline": "Autumn on the counter",
+          "body": "New this month: spiced buns, pear and almond tarts, and a dark loaf with toasted seeds.",
+          "image": { "src": "picture:pastries.jpg", "alt": "Pastries cooling on trays" }
+        },
+        {
+          "type": "richText",
+          "html": "<p>As the mornings get colder we bake a little richer. Look out for pear and almond tarts on Fridays, cinnamon and cardamom buns at the weekend, and a new loaf with toasted sunflower and pumpkin seeds every day.</p><p>Our pumpkin soup is back in the café from noon, served with a thick slice of country sourdough.</p>"
+        }
+      ]
+    },
+    {
+      "type": "recipe",
+      "slug": "seeded-rye-at-home",
+      "title": "Seeded rye at home",
+      "seoDescription": "Our seeded rye, scaled down for a home oven. One loaf, three days, very little work.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Recipe · one loaf · 3 days",
+          "headline": "Seeded rye at home",
+          "body": "Dense, dark and full of seeds. Most of the time is waiting.",
+          "image": { "src": "picture:rye.jpg", "alt": "Slices of seeded rye bread on a wooden board" },
+          "facts": [
+            { "label": "Hands-on", "value": "30 min" },
+            { "label": "Total", "value": "3 days" },
+            { "label": "Makes", "value": "1 loaf" }
+          ]
+        },
+        {
+          "type": "richText",
+          "heading": "Ingredients",
+          "html": "<ul><li>300 g wholemeal rye flour</li><li>100 g active rye starter</li><li>350 g warm water</li><li>150 g mixed seeds (sunflower, pumpkin, linseed), soaked overnight</li><li>9 g salt</li><li>1 tbsp dark treacle</li></ul>"
+        },
+        {
+          "type": "richText",
+          "heading": "Method",
+          "html": "<ol><li>Day one: mix everything into a thick, sticky paste. Cover and leave at room temperature for 12 hours.</li><li>Day two: scrape into a greased loaf tin, smooth the top and leave to rise by about a third, 3 to 4 hours.</li><li>Bake at 220°C for 15 minutes, then 190°C for 50 minutes.</li><li>Day three: wait a full day before slicing. Rye needs time to set.</li></ol>"
+        }
+      ]
+    },
+    {
+      "type": "recipe",
+      "slug": "butter-croissants",
+      "title": "Butter croissants",
+      "seoDescription": "Laminated dough, cold butter and patience: how we make our croissants.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Recipe · 12 croissants · 3 days",
+          "headline": "Butter croissants",
+          "body": "Not quick, but not hard either. Keep everything cold and do not rush the folds.",
+          "image": { "src": "picture:croissants.jpg", "alt": "Rows of golden croissants on baking paper" },
+          "facts": [
+            { "label": "Hands-on", "value": "1 hour" },
+            { "label": "Total", "value": "3 days" },
+            { "label": "Makes", "value": "12" }
+          ]
+        },
+        {
+          "type": "richText",
+          "heading": "Ingredients",
+          "html": "<ul><li>500 g strong white flour</li><li>280 g cold whole milk</li><li>55 g sugar, 10 g salt, 10 g dried yeast</li><li>280 g cold cultured butter, for laminating</li><li>1 egg, beaten, to glaze</li></ul>"
+        },
+        {
+          "type": "richText",
+          "heading": "Method",
+          "html": "<ol><li>Mix the dough, knead briefly and chill overnight.</li><li>Beat the butter into a flat square between baking paper and chill.</li><li>Enclose the butter in the dough and give it three single folds, chilling 30 minutes between each.</li><li>Roll out, cut into triangles and roll each from the wide end.</li><li>Prove for 2 hours until wobbly, glaze, and bake at 200°C for 18 minutes.</li></ol>"
+        }
+      ]
+    },
+    {
+      "type": "recipe",
+      "slug": "our-house-flat-white",
+      "title": "Our house flat white",
+      "seoDescription": "How our baristas make the café’s favourite coffee.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Recipe · one cup · 3 minutes",
+          "headline": "Our house flat white",
+          "body": "A double ristretto and silky milk. The trick is the milk, not the machine.",
+          "image": { "src": "picture:coffee.jpg", "alt": "Milk being poured into a flat white" }
+        },
+        {
+          "type": "richText",
+          "heading": "Method",
+          "html": "<ol><li>Pull a double ristretto: 18 g of coffee, 30 g in the cup, about 25 seconds.</li><li>Steam 150 ml of cold whole milk to 60°C, keeping the foam thin and glossy.</li><li>Pour from close to the surface, then lift for the last third to finish the pattern.</li></ol><p>Our beans come from Harbour Roasters, two streets away. Ask at the counter for a bag to take home.</p>"
+        }
+      ]
+    }
+  ]
+}

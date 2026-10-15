@@ -56,6 +56,12 @@ reach it over REST.
   `ProvisioningRepository` is the second unscoped desk: writes, and only creates (`createTenant`, `createSite`),
   each in one transaction (`../docs/DECISIONS.md` D-019). A role's permission list is a snapshot: a permission
   added to `Permission` later reaches existing roles only through a migration.
+- **The demo clients** are `npm run demo -- --email <account> [--domain <domain>] [--replace]` (`src/cli/run-demo.ts`,
+  `demo/`, DEP-03 minimum, `../docs/DECISIONS.md` D-044): each folder in `demo/` (a `content.json` and `images/`) becomes an
+  organisation and a site at `<address>.<domain>` (default `localhost`) owned by that account, through the same services the
+  routes use (provisioning, media, appearance, content types, content, publish). `"picture:<file>"` in blocks becomes the
+  picture's library address. A client already there is refused unless `--replace` (deleted, then made again). It is its own
+  process, so a running API's address memory may answer an old site for up to a minute after `--replace`.
 - **Creating a site from the admin** is `POST /sites` (`name`, `hostnames`, and `organizationId` only when the person
   owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
   an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
