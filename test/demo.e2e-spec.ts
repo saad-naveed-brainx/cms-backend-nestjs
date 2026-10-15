@@ -1,16 +1,25 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { DataSource } from 'typeorm';
-import { runDemo } from '../src/cli/run-demo.js';
-import { SiteResolver } from '../src/sites/site-resolver.service.js';
+import { AppearanceService } from '../src/appearance/appearance.service.js';
+import { runDemo, type DemoApp } from '../src/cli/run-demo.js';
+import { ContentTypesService } from '../src/content/content-types.service.js';
+import { ContentRepository } from '../src/content/content.repository.js';
+import { ContentService } from '../src/content/content.service.js';
+import { MediaService } from '../src/media/media.service.js';
+import { PlatformRepository } from '../src/platform/platform.repository.js';
+import { ProvisioningService } from '../src/provisioning/provisioning.service.js';
+import { SiteRemovalService } from '../src/site-removal/site-removal.service.js';
 import { createTestApp } from './support/app.js';
 import { resetDatabase } from './support/database.js';
 
 /**
  * The demo command (DEP-03 minimum, D-044) end to end: the real `runDemo` with the real demo files in
- * `demo/`, the real application (as `npm run demo` opens it), the test database and the tests' own
- * picture folder. What it made is then read the way the website and the admin read it: through the
- * public route, the sign-in and the uploaded files.
+ * `demo/`, the real services, the test database and the tests' own picture folder. The command is
+ * given this file's application (its `close` does nothing), as run-seed.e2e-spec.ts does: a second
+ * Nest application in the same test process sometimes left this one's database connection closed.
+ * What it made is then read the way the website and the admin read it: through the public route, the
+ * sign-in and the uploaded files.
  */
 
 // Two clients: 18 pictures through sharp, two sites, 17 pages and items.
@@ -31,9 +40,20 @@ const lines = () => {
     },
   };
 };
+const thisApp = async (): Promise<DemoApp> => ({
+  provisioning: app.get(ProvisioningService),
+  platform: app.get(PlatformRepository),
+  removal: app.get(SiteRemovalService),
+  media: app.get(MediaService),
+  appearance: app.get(AppearanceService),
+  types: app.get(ContentTypesService),
+  content: app.get(ContentService),
+  pages: app.get(ContentRepository),
+  close: async () => {},
+});
 const demo = (argv: string[]) => {
   const { io, sink } = lines();
-  return runDemo(argv, { SEED_ADMIN_PASSWORD: PASSWORD }, sink).then(
+  return runDemo(argv, { SEED_ADMIN_PASSWORD: PASSWORD }, sink, thisApp).then(
     (code) => ({ code, ...io }),
   );
 };
@@ -165,9 +185,6 @@ describe('npm run demo', () => {
     ]);
     expect(replaced.errors).toEqual([]);
     expect(replaced.code).toBe(0);
-    // The command is its own process: a running API's address memory forgets the old site within its
-    // minute (D-044). This test's API is told at once instead of waiting.
-    app.get(SiteResolver).invalidateAll();
     const after = (await site('kettle-and-crumb.demo.test').expect(200)).body
       .page.blocks[0].image.src;
     expect(after).not.toBe(before);
