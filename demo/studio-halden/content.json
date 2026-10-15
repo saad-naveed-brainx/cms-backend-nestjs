@@ -1,0 +1,274 @@
+{
+  "organization": "Studio Halden AS",
+  "site": "Studio Halden",
+  "address": "studio-halden",
+  "appearance": {
+    "tagline": "Architecture & interiors",
+    "footerNote": "Studio Halden · Fjordgata 12, Bergen · studio@halden.example · +47 55 12 34 56",
+    "logo": "logo.png",
+    "theme": {
+      "typeSet": "technical",
+      "shape": "sharp",
+      "density": "comfortable",
+      "texture": "grid",
+      "palette": {
+        "paper": "#f4f3f0",
+        "surface": "#ffffff",
+        "ink": "#141414",
+        "muted": "#55534e",
+        "line": "#d9d6cf",
+        "brand": "#141414",
+        "onBrand": "#ffffff",
+        "accent": "#7d4f22"
+      }
+    }
+  },
+  "pictures": ["concrete.jpg", "villa.jpg", "forest-house.jpg", "courtyard.jpg", "facade.jpg", "stairs.jpg", "interior.jpg", "model.jpg", "logo.png"],
+  "types": [{ "name": "Project", "urlPrefix": "/projects" }],
+  "items": [
+    {
+      "type": "page",
+      "slug": "home",
+      "title": "Home",
+      "seoTitle": "Studio Halden — architecture and interiors, Bergen",
+      "seoDescription": "Houses, public buildings and interiors designed to sit quietly in their landscape and last for generations.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Architecture & interiors · Bergen",
+          "headline": "Quiet buildings, made to last",
+          "body": "We design houses, libraries and interiors that sit calmly in their landscape and grow better with age.",
+          "primaryAction": { "label": "See our projects", "href": "/projects" },
+          "secondaryAction": { "label": "About the studio", "href": "/the-studio" },
+          "image": { "src": "picture:concrete.jpg", "alt": "A board-marked concrete house among trees" },
+          "facts": [
+            { "label": "Founded", "value": "2012" },
+            { "label": "Projects built", "value": "38" },
+            { "label": "Awards", "value": "9" }
+          ]
+        },
+        {
+          "type": "featureGrid",
+          "heading": "What we do",
+          "intro": "A small studio of eleven architects and interior designers, working from first sketch to the last door handle.",
+          "items": [
+            { "label": "01", "title": "Houses", "body": "Private homes on difficult sites: slopes, shorelines and forests." },
+            { "label": "02", "title": "Public buildings", "body": "Libraries, schools and community halls built for daily use." },
+            { "label": "03", "title": "Interiors", "body": "Furniture, light and materials designed together with the building." },
+            { "label": "04", "title": "Restoration", "body": "Careful repair and reuse of older timber and stone buildings." }
+          ]
+        },
+        {
+          "type": "imageText",
+          "heading": "Designed from the inside out",
+          "body": "We start with how a room will feel at seven in the morning and at nine at night, then design the building around it: where the light falls, what you see, what you touch.",
+          "image": { "src": "picture:interior.jpg", "alt": "A calm, white living room with a low sofa" },
+          "imagePosition": "right"
+        },
+        {
+          "type": "imageText",
+          "heading": "Models before drawings",
+          "body": "Every project starts on the model table. Cardboard and timber models let clients walk round a building long before it exists.",
+          "image": { "src": "picture:model.jpg", "alt": "A detailed architectural model on a dark table" },
+          "imagePosition": "left",
+          "action": { "label": "How we work", "href": "/the-studio" }
+        },
+        {
+          "type": "testimonial",
+          "quote": "They listened for a long time before they drew anything. The house they built us feels like it has always been there.",
+          "attribution": "Ingrid and Lars Moe",
+          "role": "Forest Pavilion, 2023"
+        },
+        {
+          "type": "cta",
+          "heading": "Starting a project?",
+          "body": "Tell us about your site, your plans and your timeline. We reply within a week.",
+          "action": { "label": "Write to the studio", "href": "mailto:studio@halden.example" },
+          "note": "We take on six new projects a year."
+        }
+      ]
+    },
+    {
+      "type": "page",
+      "slug": "the-studio",
+      "title": "The studio",
+      "seoDescription": "Eleven architects and designers in Bergen. How we work, from the first conversation to the finished building.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "The studio",
+          "headline": "Eleven people, one long table",
+          "body": "Founded by Kari Halden in 2012, the studio works from an old rope factory on the Bergen waterfront.",
+          "image": { "src": "picture:stairs.jpg", "alt": "A pale stone staircase lit from above" }
+        },
+        {
+          "type": "featureGrid",
+          "heading": "How we work",
+          "ordered": true,
+          "items": [
+            { "title": "Listen", "body": "We spend time on the site and with the people who will use the building." },
+            { "title": "Sketch", "body": "Many quick ideas, in pencil, discussed openly with the client." },
+            { "title": "Model", "body": "Physical models at every stage, from site to door handle." },
+            { "title": "Build", "body": "We stay on site with the builders until the last day." }
+          ]
+        },
+        {
+          "type": "richText",
+          "heading": "What matters to us",
+          "html": "<p>We prefer few materials, used honestly: timber, stone, concrete and lime. We design for repair, so a building can be looked after for a hundred years rather than replaced in thirty.</p><ul><li><strong>Low carbon by default.</strong> Timber structures where we can, reused materials where they exist.</li><li><strong>Daylight first.</strong> Every room is planned around where the sun comes from.</li><li><strong>Built locally.</strong> We work with craftspeople from the region.</li></ul>"
+        }
+      ]
+    },
+    {
+      "type": "page",
+      "slug": "contact",
+      "title": "Contact",
+      "seoDescription": "Visit or write to Studio Halden in Bergen.",
+      "blocks": [
+        {
+          "type": "richText",
+          "heading": "Visit the studio",
+          "html": "<p>Fjordgata 12, 5004 Bergen. We are on the second floor, above the boat repair yard. Visits by appointment, Monday to Friday.</p><p>Write to <a href=\"mailto:studio@halden.example\">studio@halden.example</a> or call <a href=\"tel:+4755123456\">+47 55 12 34 56</a>.</p>"
+        },
+        {
+          "type": "cta",
+          "heading": "Working with us",
+          "body": "Send a few lines about your site and your plans, with photos if you have them.",
+          "action": { "label": "Email the studio", "href": "mailto:studio@halden.example" }
+        }
+      ]
+    },
+    {
+      "type": "project",
+      "slug": "villa-arden",
+      "title": "Villa Arden",
+      "seoDescription": "A family house on the water: two long concrete floors opening onto a pool terrace.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "House · 2021",
+          "headline": "Villa Arden",
+          "body": "Two long floors stretch along the shoreline, so every room looks out over the water.",
+          "image": { "src": "picture:villa.jpg", "alt": "A long, low modern house with a pool in front" },
+          "facts": [
+            { "label": "Location", "value": "Os, Norway" },
+            { "label": "Area", "value": "420 m²" },
+            { "label": "Completed", "value": "2021" }
+          ]
+        },
+        {
+          "type": "richText",
+          "html": "<p>The clients wanted a house that would bring three generations together in summer and feel just as right for two people in winter. We split it into a lively lower floor around the kitchen and pool terrace, and a quiet upper floor of bedrooms set back behind deep timber shutters.</p><p>The structure is cast concrete with a recycled aggregate; the floors are local oak, and the shutters are larch that will turn silver over the first few years.</p>"
+        }
+      ]
+    },
+    {
+      "type": "project",
+      "slug": "forest-pavilion",
+      "title": "Forest Pavilion",
+      "seoDescription": "A small timber and glass house lifted among the trees.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "House · 2023",
+          "headline": "Forest Pavilion",
+          "body": "A timber house on slender columns, built without felling a single tree on the site.",
+          "image": { "src": "picture:forest-house.jpg", "alt": "A timber and glass house among tall trees" },
+          "facts": [
+            { "label": "Location", "value": "Voss, Norway" },
+            { "label": "Area", "value": "140 m²" },
+            { "label": "Completed", "value": "2023" }
+          ]
+        },
+        {
+          "type": "richText",
+          "html": "<p>The site was a steep slope of birch and pine. Instead of levelling it, we set the house on twelve slim steel columns and threaded it between the trees. The glass walls slide fully open in summer, turning the main room into a covered deck.</p><p>Prefabricated timber panels were carried in by hand, so no heavy machinery ever reached the site.</p>"
+        }
+      ]
+    },
+    {
+      "type": "project",
+      "slug": "courtyard-house",
+      "title": "Courtyard House",
+      "seoDescription": "A city house built around a quiet concrete courtyard.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "House · 2019",
+          "headline": "Courtyard House",
+          "body": "On a busy street, a house that turns inward around a private, sunlit courtyard.",
+          "image": { "src": "picture:courtyard.jpg", "alt": "A sunlit concrete courtyard with a framed view of the sky" },
+          "facts": [
+            { "label": "Location", "value": "Bergen" },
+            { "label": "Area", "value": "230 m²" },
+            { "label": "Completed", "value": "2019" }
+          ]
+        },
+        {
+          "type": "richText",
+          "html": "<p>The street side is almost blank: one door and one window. Inside, every room opens onto a courtyard that catches the afternoon sun and keeps the traffic out. The concrete is board-marked with spruce, so the walls carry the grain of the timber that shaped them.</p>"
+        }
+      ]
+    },
+    {
+      "type": "project",
+      "slug": "nordvik-library",
+      "title": "Nordvik Library",
+      "seoDescription": "A public library whose patterned facade filters light into the reading rooms.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Public building · 2020",
+          "headline": "Nordvik Library",
+          "body": "A library for a growing town, with a facade that filters daylight like the canopy of a forest.",
+          "image": { "src": "picture:facade.jpg", "alt": "A long building with a deep geometric facade pattern" },
+          "facts": [
+            { "label": "Location", "value": "Nordvik" },
+            { "label": "Area", "value": "3,100 m²" },
+            { "label": "Completed", "value": "2020" }
+          ]
+        },
+        {
+          "type": "richText",
+          "html": "<p>The facade is made of precast panels set at different depths. In the morning the reading rooms are lit softly from the east; by afternoon the deep reveals cut out the glare, so nobody needs blinds.</p><blockquote><p>Winner of the National Library Building Award, 2021.</p></blockquote>"
+        }
+      ]
+    },
+    {
+      "type": "post",
+      "slug": "why-we-build-models",
+      "title": "Why we still build models",
+      "seoDescription": "In an age of renderings, why every Studio Halden project still starts on the model table.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Journal",
+          "headline": "Why we still build models",
+          "image": { "src": "picture:model.jpg", "alt": "An architectural model on a dark table" }
+        },
+        {
+          "type": "richText",
+          "html": "<p>A rendering shows you a building from the one angle the architect chose. A model lets you choose. Clients pick it up, turn it to the sun, crouch to see the view from a chair. The conversation changes.</p><p>We build three kinds: quick card models in the first week, a site model in timber, and a large interior model of the rooms that matter most.</p>"
+        }
+      ]
+    },
+    {
+      "type": "post",
+      "slug": "designing-for-daylight",
+      "title": "Designing for daylight",
+      "seoDescription": "Bergen has long summer evenings and short winter days. How we plan rooms around the light.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Journal",
+          "headline": "Designing for daylight",
+          "image": { "src": "picture:stairs.jpg", "alt": "Daylight falling down a pale staircase" }
+        },
+        {
+          "type": "richText",
+          "html": "<p>In Bergen the sun barely clears the mountains in December and hardly sets in June. We study each site through the whole year before deciding where the windows go.</p><ul><li>Kitchens face east for morning light.</li><li>Living rooms face west for long evenings.</li><li>Stairs are lit from above, so they glow on grey days.</li></ul>"
+        }
+      ]
+    }
+  ]
+}
