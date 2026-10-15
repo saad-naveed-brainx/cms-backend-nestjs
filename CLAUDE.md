@@ -96,8 +96,9 @@ reach it over REST.
   website's five-minute expiry is the safety net. A new route that changes what a published page shows must call it too.
   The API tests run with it off (`vitest.config.e2e.ts`) unless a test points it at its own stand-in.
 - **A site's appearance** (GOV-04, `src/appearance/`, `../docs/DECISIONS.md` D-036): `GET /appearance` (any member) and
-  `PATCH /appearance` (`settings.manage`), both with `X-Site-Id`, read and save `{ name, tagline, footerNote, theme }`. The
-  tagline and footer note live in `sites.settings` (other settings are kept; empty removes one); the theme is sent whole
+  `PATCH /appearance` (`settings.manage`), both with `X-Site-Id`, read and save `{ name, tagline, footerNote, logoUrl, theme }`. The
+  tagline, footer note and logo address (a full `http(s)://` address, normally a library picture, MED-03) live in
+  `sites.settings` (other settings are kept; empty removes one; the public answer passes `settings` through); the theme is sent whole
   and checked against the website's own names and colour rule, mirrored by hand in `appearance-input.ts` (a choice added
   to `web/src/theme/theme.ts` must be added there). `SiteRepository` is the site's own row, keyed by the checked
   `siteId`, saved in one locked transaction. A save calls `invalidateSite` and `forgetSite`.
