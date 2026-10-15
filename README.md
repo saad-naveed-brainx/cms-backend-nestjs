@@ -30,6 +30,13 @@ CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
 `CORS_ORIGINS` must list the dev origins of `cms-web` (3000) and `cms-admin`
 (5173) — they are separate origins, so CORS is what lets them call this API.
 
+## Production
+
+**[deploy/README.md](deploy/README.md)** is the runbook for the whole platform (this API, the website
+and the admin) on one server at `nodepress.brainxdemo.com`. This repo's part is in `deploy/`: the live
+`.env` (`production.env.example`), the nginx server blocks (`nginx.conf`) and the pm2 process
+(`pm2.config.cjs`).
+
 ## Scripts
 
 | Script                    | Does                                   |
