@@ -36,6 +36,18 @@ const theme = z.strictObject({
 const line = (max: number) => z.string().trim().max(max);
 
 /**
+ * The logo's address (MED-03, D-042): a picture from the media library, so a full `https://` or
+ * `http://` address (the API's own, `MEDIA_PUBLIC_URL`). Nothing the browser could run. Empty clears it.
+ */
+const logoUrl = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine((value) => value === '' || /^https?:\/\/[^\s]+$/i.test(value), {
+    message: 'use a full picture address starting with https:// or http://',
+  });
+
+/**
  * A change to the site's appearance (GOV-04). Strict: anything not listed (a `siteId`) is an error.
  * The name is the site's own (what the header shows and titles end with); the theme is sent whole.
  */
@@ -44,10 +56,11 @@ export const appearanceBody = z
     name: z.string().trim().min(1).max(120).optional(),
     tagline: line(120).optional(),
     footerNote: line(300).optional(),
+    logoUrl: logoUrl.optional(),
     theme: theme.optional(),
   })
   .refine((body) => Object.keys(body).length > 0, {
-    message: 'give at least one of name, tagline, footerNote, theme',
+    message: 'give at least one of name, tagline, footerNote, logoUrl, theme',
   });
 
 export type AppearanceBody = z.infer<typeof appearanceBody>;

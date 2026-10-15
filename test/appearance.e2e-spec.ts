@@ -98,6 +98,7 @@ describe('a site’s appearance', () => {
       name: 'Orchard Bakery',
       tagline: '',
       footerNote: '',
+      logoUrl: '',
       theme: {},
     });
 
@@ -116,6 +117,7 @@ describe('a site’s appearance', () => {
       name: 'Orchard Bakery & Café',
       tagline: 'Baked at five, every morning',
       footerNote: '12 Harbour Street · Open daily from 7',
+      logoUrl: '',
       theme: HARBOUR,
     };
     expect(saved.body).toEqual(expected);
@@ -261,5 +263,52 @@ describe('a site’s appearance', () => {
     told = [];
     await save(admin.headers, { name: '' }).expect(400);
     expect(told).toEqual([]);
+  });
+});
+
+describe('the site’s logo', () => {
+  it('[UC-MD-07] a logo address is saved, read back and sent to the website; empty removes it; anything that is not a full web address is refused', async () => {
+    const { admin, viewer, siteId } = world.orchard;
+    const logo = `http://media.test/uploads/${siteId}/0198f2a0-0000-7000-8000-00000000a000.png`;
+
+    const saved = await save(admin.headers, { logoUrl: `  ${logo} ` }).expect(
+      200,
+    );
+    expect(saved.body.logoUrl).toBe(logo);
+    expect((await read(viewer.headers).expect(200)).body.logoUrl).toBe(logo);
+    expect((await storedSite(siteId)).settings).toMatchObject({
+      logoUrl: logo,
+    });
+
+    const page = await world.newPage(admin, 'home', { title: 'Home' });
+    await world
+      .api()
+      .post(`/content/${page.id}/publish`)
+      .set(admin.headers)
+      .expect(200);
+    const home = await world
+      .api()
+      .get('/public/site?host=orchard.test&path=/')
+      .expect(200);
+    expect(home.body.site.settings.logoUrl).toBe(logo);
+
+    for (const bad of [
+      'javascript:alert(1)',
+      '/uploads/logo.png',
+      'data:image/png;base64,AAAA',
+      'https://evil.test/a b.png',
+      `https://media.test/${'x'.repeat(2000)}`,
+    ]) {
+      const refusal = await save(admin.headers, { logoUrl: bad });
+      expect(refusal.status, bad).toBe(400);
+      expect(refusal.body.errors[0], bad).toMatch(/^logoUrl: /);
+    }
+    expect((await storedSite(siteId)).settings).toMatchObject({
+      logoUrl: logo,
+    });
+
+    await save(admin.headers, { logoUrl: '' }).expect(200);
+    expect((await storedSite(siteId)).settings).not.toHaveProperty('logoUrl');
+    expect((await read(viewer.headers).expect(200)).body.logoUrl).toBe('');
   });
 });

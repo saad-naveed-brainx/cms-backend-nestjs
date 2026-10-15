@@ -10,6 +10,8 @@ export type AppearanceView = {
   name: string;
   tagline: string;
   footerNote: string;
+  /** The logo's address (a library picture), or `''` for none: the header shows the name only. */
+  logoUrl: string;
   theme: Record<string, unknown>;
 };
 
@@ -21,12 +23,13 @@ function toView(site: Site): AppearanceView {
     name: site.name,
     tagline: text(site.settings.tagline),
     footerNote: text(site.settings.footerNote),
+    logoUrl: text(site.settings.logoUrl),
     theme: site.theme,
   };
 }
 
 /**
- * A site's name, header tagline, footer note and theme (GOV-04), for the site the request was
+ * A site's name, header tagline, footer note, logo and theme (GOV-04, MED-03), for the site the request was
  * checked for. A save shows on the website at once: the address lookup forgets the site, and the
  * website is told to forget its cached pages (CNT-08).
  */
@@ -49,6 +52,7 @@ export class AppearanceService {
     if (body.tagline !== undefined) settings.tagline = body.tagline || null;
     if (body.footerNote !== undefined)
       settings.footerNote = body.footerNote || null;
+    if (body.logoUrl !== undefined) settings.logoUrl = body.logoUrl || null;
 
     const site = await this.sites.updateAppearance(siteId, {
       name: body.name,
