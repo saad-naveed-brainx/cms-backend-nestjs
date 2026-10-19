@@ -19,7 +19,9 @@ reach it over REST.
 4. HTML is sanitised **on write**. Never sanitise on read.
 5. Validation is Zod. `class-validator` is deliberately not installed.
 6. `siteId` comes from the authenticated request, never from a request body. `@CurrentSite()` is where
-   this comes from: the `X-Site-Id` header, checked against membership on every request (decision D-018).
+   this comes from: the `X-Site-Id` header, checked against membership on every request (decision D-018),
+   and lower-cased by `SiteAccessGuard`, so an upper-case id is the same site and `site.siteId` is always the
+   stored form (users-roles D11, B-24 (1)).
 7. The two invariant tests (cross-tenant read denial, recursive path recomputation) must stay green.
    A red invariant test stops other work.
 
@@ -130,6 +132,15 @@ reach it over REST.
   (`@SiteScoped()`, `@RequirePermission(...)`) also needs the `X-Site-Id` header. Permissions are looked up per
   request, not read from the token. `JWT_SECRET` must be set (32+ characters in production); the test configs set
   their own, and `JWT_EXPIRES_IN` defaults to `7d` (`../docs/DECISIONS.md` D-018).
+- **Members routes** (`src/members/`, users-roles T2, plan D6): `GET /members`, `PATCH /members/:userId` (`{ roleId }`) and
+  `DELETE /members/:userId`, all `members.manage` with `X-Site-Id`. The list is `{ roles, members }`: roles in
+  `ROLE_DEFINITIONS` order, members by name then id as `{ userId, name, email, role: { id, name }, isOwner }` (users read
+  only through this site's `site_members` rows; never the password hash). A role not on this site is a 400, someone not a
+  member (or a malformed id) a 404, the same role a no-op 200. "Administrator" means a role holding `members.manage`. Changes
+  and removals run in ONE `SiteMemberRepository` transaction that locks the site's row first (`FOR UPDATE`, like site
+  removal), so two Administrators acting at once are serialised: the organisation's owner may not lose `members.manage` or be
+  removed (409 "The organisation's owner stays an Administrator.", checked first), and the last member holding it may not
+  either (409 "A site needs at least one Administrator.").
 - **Pages routes** (`src/content/`): `GET` and `POST /content`, `GET` and `PATCH /content/:id`, `GET` (and, above, `POST`) `/content-types`, all with
   `X-Site-Id`. Reading is for any member, creating needs `content.create`, editing needs `content.edit_any` or `content.edit_own`
   on a page you created. A page's address is its type's prefix plus its slug, fixed at creation; slug and parent change

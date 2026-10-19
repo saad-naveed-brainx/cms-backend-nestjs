@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { HostnamesModule } from './hostnames/hostnames.module.js';
 import { MediaModule } from './media/media.module.js';
+import { MembersModule } from './members/members.module.js';
 import { PlatformModule } from './platform/platform.module.js';
 import { ProvisioningModule } from './provisioning/provisioning.module.js';
 import { PublicModule } from './public/public.module.js';
@@ -31,6 +32,7 @@ import { SitesModule } from './sites/sites.module.js';
     SiteRemovalModule,
     HostnamesModule,
     MediaModule,
+    MembersModule,
     SitesModule,
   ],
   controllers: [AppController],

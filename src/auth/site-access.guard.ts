@@ -22,7 +22,8 @@ import type { Permission } from './permission.js';
  * every permission the route asks for (D-018, `api/CLAUDE.md` rule 6).
  *
  * - The header must be exactly one uuid: missing, empty, repeated or malformed is a 400, decided
- *   before anything is read from the database.
+ *   before anything is read from the database. Upper case is accepted and lower-cased, so
+ *   `request.site.siteId` is always the stored form.
  * - A site the user is not a member of and a site that does not exist are the same 403, so the
  *   answer does not say which site ids exist. A missing permission is that same 403.
  * - The role is read on every request, so a changed role or a removed member takes effect at once.
@@ -53,12 +54,15 @@ export class SiteAccessGuard implements CanActivate {
     if (!request.user) throw new UnauthorizedException();
 
     // A repeated header arrives joined with ", ", so it fails this check like any malformed one.
-    const siteId = request.headers['x-site-id'];
-    if (!isUuid(siteId)) {
+    const header = request.headers['x-site-id'];
+    if (!isUuid(header)) {
       throw new BadRequestException(
         'X-Site-Id must be the id of one site (a uuid)',
       );
     }
+    // Ids are stored lower-case: an upper-case header is the same site, and everything after the
+    // guard compares the lower-case form (users-roles D11, B-24 (1)).
+    const siteId = header.toLowerCase();
 
     const access = await this.members.findAccess(siteId, request.user.id);
     if (
