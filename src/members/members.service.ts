@@ -5,6 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  InvitationRepository,
+  type InvitationView,
+} from '../invitations/invitation.repository.js';
+import {
   SiteMemberRepository,
   type MemberChange,
   type MemberView,
@@ -22,16 +26,23 @@ export const OWNER_STAYS_MESSAGE =
  */
 @Injectable()
 export class MembersService {
-  constructor(private readonly members: SiteMemberRepository) {}
+  constructor(
+    private readonly members: SiteMemberRepository,
+    private readonly invitations: InvitationRepository,
+  ) {}
 
-  async list(
-    siteId: string,
-  ): Promise<{ roles: RoleSummary[]; members: MemberView[] }> {
-    const [roles, members] = await Promise.all([
+  /** The site's roles, its people, and its waiting invitations (newest first, expired ones included). */
+  async list(siteId: string): Promise<{
+    roles: RoleSummary[];
+    members: MemberView[];
+    invitations: InvitationView[];
+  }> {
+    const [roles, members, invitations] = await Promise.all([
       this.members.listRoles(siteId),
       this.members.listMembers(siteId),
+      this.invitations.listForSite(siteId),
     ]);
-    return { roles, members };
+    return { roles, members, invitations };
   }
 
   async changeRole(

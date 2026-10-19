@@ -2,6 +2,7 @@ import { Content } from './content.entity.js';
 import { ContentType } from './content-type.entity.js';
 import { FormSubmission } from './form-submission.entity.js';
 import { Hostname } from './hostname.entity.js';
+import { Invitation } from './invitation.entity.js';
 import { Media } from './media.entity.js';
 import { Menu } from './menu.entity.js';
 import { MenuItem } from './menu-item.entity.js';
@@ -20,6 +21,7 @@ export {
   ContentType,
   FormSubmission,
   Hostname,
+  Invitation,
   Media,
   Menu,
   MenuItem,
@@ -52,4 +54,5 @@ export const ENTITIES = [
   MenuItem,
   Redirect,
   FormSubmission,
+  Invitation,
 ];
