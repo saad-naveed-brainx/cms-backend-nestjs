@@ -83,9 +83,10 @@ export class InvitationRepository extends ScopedRepository<Invitation> {
     }
 
     return this.dataSource.transaction(async (manager) => {
+      // FOR NO KEY UPDATE, not FOR UPDATE: it still serialises two creates, but does not block the FOR KEY SHARE an accept's membership insert takes on the site (no deadlock).
       await manager.findOne(Site, {
         where: { id: siteId },
-        lock: { mode: 'pessimistic_write' },
+        lock: { mode: 'for_no_key_update' },
       });
 
       const role = await manager.existsBy(Role, { siteId, id: data.roleId });

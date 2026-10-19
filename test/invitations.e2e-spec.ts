@@ -13,7 +13,11 @@ import {
   newClient,
   roleIdOf,
 } from './support/invitations.js';
+import { InvitationAcceptanceRepository } from '../src/invitations/invitation-acceptance.repository.js';
 import { addMember } from './support/members.js';
+
+/** A well-formed address (short local part, domain labels of at most 63) one character over the 254 limit. */
+const TOO_LONG_EMAIL = `s@${['a', 'b', 'c'].map((c) => c.repeat(63)).join('.')}.${'d'.repeat(49)}.kettle.test`;
 
 /**
  * Users and roles, T3 (`docs/features/users-roles/`), the Administrator's side of invitations:
@@ -155,7 +159,7 @@ describe('invite input', () => {
     const badEmails: [string, unknown][] = [
       ['not an email', 'not-an-email'],
       ['empty', ''],
-      ['300 characters', `${'s'.repeat(289)}@kettle.test`],
+      ['255 characters, otherwise well formed', TOO_LONG_EMAIL],
       ['missing', undefined],
     ];
     for (const [what, email] of badEmails) {
@@ -401,6 +405,16 @@ describe('the link secret', () => {
     const olivia = await kettle();
     const sara = await invite(app, olivia, 'sara@kettle.test', 'Editor');
     expect(sara.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    // The unscoped acceptance desk stays as narrow as the other unscoped desks (plan D5, D-048).
+    const methodsOf = (type: { prototype: object }) =>
+      Object.getOwnPropertyNames(type.prototype)
+        .filter((name) => name !== 'constructor')
+        .sort();
+    expect(
+      methodsOf(InvitationAcceptanceRepository),
+      'InvitationAcceptanceRepository has findByTokenHash and accept and nothing else (helpers belong outside the class)',
+    ).toEqual(['accept', 'findByTokenHash']);
 
     const [row] = await dataSource.query<Record<string, unknown>[]>(
       'SELECT * FROM invitations WHERE id = $1',
