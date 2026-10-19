@@ -73,7 +73,8 @@ async function addMember(
   });
   const role = await seedRole(dataSource, {
     siteId,
-    name: roleName,
+    // Its own role, named apart from the five every site has (users-roles T1): the roles are unique by name per site.
+    name: `${roleName} (test)`,
     permissions,
   });
   await seedMembership(dataSource, {

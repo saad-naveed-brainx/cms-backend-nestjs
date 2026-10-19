@@ -41,6 +41,22 @@ function typeRef(page: Content, types: Map<string, ContentType>): TypeRef {
   };
 }
 
+/** Who created a page, as a list row shows it; `null` once their account is gone. */
+export type AuthorRef = { id: string; name: string };
+
+/** The page list's rows: each page with its author (plan D9). */
+function toListRow(
+  page: Content,
+  types: Map<string, ContentType>,
+  authors: Map<string, AuthorRef>,
+) {
+  return {
+    ...toSummary(page, types),
+    author:
+      page.createdBy === null ? null : (authors.get(page.createdBy) ?? null),
+  };
+}
+
 function toSummary(page: Content, types: Map<string, ContentType>) {
   return {
     id: page.id,
@@ -81,6 +97,23 @@ export function toTypeView(type: ContentType) {
     hasTags: type.hasTags,
     isBuiltin: type.isBuiltin,
   };
+}
+
+/**
+ * Publishing and unpublishing: `content.publish` on any page of the site, `content.publish_own`
+ * only on a page the person created; neither is a 403. Checked after the page is found, so a page
+ * that is not there (or another site's) stays a 404, as with editing.
+ */
+function requirePublishRight(
+  access: SiteAccess,
+  user: AuthUser,
+  page: Content,
+): void {
+  const mayPublish =
+    access.permissions.includes(Permission.ContentPublish) ||
+    (access.permissions.includes(Permission.ContentPublishOwn) &&
+      page.createdBy === user.id);
+  if (!mayPublish) throw new ForbiddenException();
 }
 
 /** A type's URL prefix and a slug make the page's full address: `/blog` + `hello` → `/blog/hello`. */
@@ -125,7 +158,7 @@ export class ContentService {
       contentTypeId = wanted.id;
     }
 
-    const { rows, total } = await this.pages.list(siteId, {
+    const { rows, total, authors } = await this.pages.list(siteId, {
       contentTypeId,
       status: query.status,
       path: query.path,
@@ -133,7 +166,7 @@ export class ContentService {
       offset: query.offset,
     });
     return {
-      items: rows.map((page) => toSummary(page, types)),
+      items: rows.map((page) => toListRow(page, types, authors)),
       total,
       limit: query.limit,
       offset: query.offset,
@@ -237,7 +270,7 @@ export class ContentService {
   /**
    * Makes the page live now. Anything not yet live (a draft, a page waiting for review, a
    * scheduled one) becomes `published`; publishing a published page changes nothing, so the first
-   * publish time stays. Whether the person may is the route's `content.publish`.
+   * publish time stays. Who may: see `requirePublishRight`.
    */
   async publish(
     access: SiteAccess,
@@ -246,6 +279,7 @@ export class ContentService {
   ): Promise<PageView> {
     const page = await this.pages.findById(access.siteId, id);
     if (!page) throw new NotFoundException('Page not found');
+    requirePublishRight(access, user, page);
     if (page.status === ContentStatus.Published) {
       return toPage(page, await this.typesById(access.siteId));
     }
@@ -261,7 +295,10 @@ export class ContentService {
     return toPage(updated, await this.typesById(access.siteId));
   }
 
-  /** Takes a published page back to `draft`. A page that is not published is a 409. */
+  /**
+   * Takes a published page back to `draft`. A page that is not published is a 409. Who may: see
+   * `requirePublishRight`.
+   */
   async unpublish(
     access: SiteAccess,
     user: AuthUser,
@@ -269,6 +306,7 @@ export class ContentService {
   ): Promise<PageView> {
     const page = await this.pages.findById(access.siteId, id);
     if (!page) throw new NotFoundException('Page not found');
+    requirePublishRight(access, user, page);
     if (page.status !== ContentStatus.Published) {
       throw new ConflictException('This page is not published');
     }

@@ -101,7 +101,8 @@ describe('deleting a site', () => {
     expect(await rowsOf(siteId)).toEqual({
       sites: 1,
       hostnames: 2,
-      roles: 2,
+      // The five roles every site has (users-roles T1), and the guest's own.
+      roles: 6,
       site_members: 2,
       content_types: 2,
       content: 2,

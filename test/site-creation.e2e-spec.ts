@@ -75,11 +75,20 @@ describe('creating a site', () => {
       { hostname: 'cafe.test', is_primary: true },
       { hostname: 'www.cafe.test', is_primary: false },
     ]);
-    const [role] = await dataSource.query(
-      'SELECT name, permissions::text[] AS permissions FROM roles WHERE site_id = $1',
-      [siteId],
-    );
-    expect(role.name).toBe('Administrator');
+    // The five roles of every site (users-roles T1); the Administrator one holds every permission.
+    const roles: { name: string; permissions: string[] }[] =
+      await dataSource.query(
+        'SELECT name, permissions::text[] AS permissions FROM roles WHERE site_id = $1',
+        [siteId],
+      );
+    expect(roles.map((row) => row.name).sort()).toEqual([
+      'Administrator',
+      'Author',
+      'Contributor',
+      'Editor',
+      'Viewer',
+    ]);
+    const role = roles.find((row) => row.name === 'Administrator')!;
     expect([...role.permissions].sort()).toEqual(
       Object.values(Permission).sort(),
     );

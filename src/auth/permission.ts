@@ -11,6 +11,8 @@ export enum Permission {
   ContentEditOwn = 'content.edit_own',
   ContentEditAny = 'content.edit_any',
   ContentPublish = 'content.publish',
+  /** Publish and unpublish only pages the person created (Authors, D2 of users-roles). */
+  ContentPublishOwn = 'content.publish_own',
   ContentDelete = 'content.delete',
   ContentTypesManage = 'content_types.manage',
   MediaUpload = 'media.upload',

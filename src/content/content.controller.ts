@@ -28,7 +28,8 @@ import { ContentService } from './content.service.js';
 /**
  * Pages of the site named by `X-Site-Id` (CNT-01). Reading is for every member of the site;
  * creating needs `content.create`; editing is decided by the service (`content.edit_any`, or
- * `content.edit_own` on a page the person created); publishing needs `content.publish`. There is
+ * `content.edit_own` on a page the person created); publishing likewise (`content.publish`, or
+ * `content.publish_own` on a page the person created). There is
  * no delete or move here: those are CNT-11 and CNT-04/05/06.
  */
 @Controller('content')
@@ -84,10 +85,10 @@ export class ContentController {
     return this.content.preview(site.siteId, id);
   }
 
-  /** Makes a page live. Needs `content.publish`, and nothing else. */
+  /** Makes a page live. The service decides: `content.publish`, or `content.publish_own` on one's own page. */
   @Post(':id/publish')
   @HttpCode(200)
-  @RequirePermission(Permission.ContentPublish)
+  @SiteScoped()
   publish(
     @CurrentSite() site: SiteAccess,
     @CurrentUser() user: AuthUser,
@@ -96,10 +97,10 @@ export class ContentController {
     return this.content.publish(site, user, id);
   }
 
-  /** Takes a published page back to a draft. Needs `content.publish`. */
+  /** Takes a published page back to a draft. Same rule as publishing. */
   @Post(':id/unpublish')
   @HttpCode(200)
-  @RequirePermission(Permission.ContentPublish)
+  @SiteScoped()
   unpublish(
     @CurrentSite() site: SiteAccess,
     @CurrentUser() user: AuthUser,
