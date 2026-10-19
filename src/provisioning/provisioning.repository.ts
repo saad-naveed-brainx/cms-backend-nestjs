@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, QueryFailedError, type EntityManager } from 'typeorm';
-import { Permission } from '../auth/permission.js';
+import { ADMINISTRATOR_ROLE, ROLE_DEFINITIONS } from '../auth/roles.js';
 import { ContentStatus } from '../database/entities/content.entity.js';
 import {
   Content,
@@ -46,8 +46,8 @@ export type CreatedTenant = {
   roleId: string;
 };
 
-/** The role every new site starts with. The other roles come with GOV-06. */
-export const ADMINISTRATOR_ROLE = 'Administrator';
+/** Re-exported so existing imports keep working; the roles themselves live in `auth/roles.ts`. */
+export { ADMINISTRATOR_ROLE };
 
 /** The two content types every site is born with (the brief's built-in Page and Post). */
 const BUILT_IN_CONTENT_TYPES = [
@@ -82,7 +82,7 @@ const ADDRESS_UNIQUE_CONSTRAINT = 'hostnames_hostname_key';
  *
  * It exists because a tenant is built before there is a site to scope to. It inserts rows no site
  * owns yet (the user, the organisation, the site itself) and then the site's own rows (addresses,
- * role, membership, content types, the Home page), and all of it must succeed or fail together. A
+ * roles, membership, content types, the Home page), and all of it must succeed or fail together. A
  * scoped desk needs a `siteId` that does not exist yet, and no transaction object leaves a desk, so
  * several desks cannot share one transaction (docs/DECISIONS.md D-015, D-019).
  *
@@ -100,7 +100,7 @@ export class ProvisioningRepository {
 
   /**
    * Creates the user (or finds the existing one), the organisation they own, a site in it, its
-   * addresses, an `Administrator` role with every permission, the user's membership with it, and
+   * addresses, its five roles (`auth/roles.ts`), the user's membership as Administrator, and
    * the Page and Post content types and the published Home page, in one transaction: any failure
    * undoes all of it.
    *
@@ -135,8 +135,8 @@ export class ProvisioningRepository {
   }
 
   /**
-   * Adds a site to an organisation the person owns: the site, its addresses, an `Administrator`
-   * role with every permission, the person's membership with it, the Page and Post content types
+   * Adds a site to an organisation the person owns: the site, its addresses, its five roles, the
+   * person's membership as Administrator, the Page and Post content types
    * and the published Home page, in one transaction. Ownership is checked inside the transaction,
    * so a site can never be added to someone else's organisation, even by a caller's mistake
    * (`NotOrganizationOwnerError`).
@@ -157,8 +157,8 @@ export class ProvisioningRepository {
 
 /**
  * The rows every new site starts with, written inside the caller's transaction: the site (empty
- * theme and settings), its addresses (the first primary), an `Administrator` role holding every
- * permission, the person's membership with that role, the built-in content types, and a published
+ * theme and settings), its addresses (the first primary), the five roles of `ROLE_DEFINITIONS`,
+ * the person's membership as Administrator, the built-in content types, and a published
  * Home page whose only block is a hero with the site's name, so the site's `/` is never empty
  * (D-037). Every site-owned row carries the id of the site just created.
  */
@@ -182,13 +182,18 @@ async function createSiteRows(
 
   await saveAddresses(manager, site.id, data.hostnames);
 
-  const role = await manager.save(
-    manager.create(Role, {
-      siteId: site.id,
-      name: ADMINISTRATOR_ROLE,
-      permissions: Object.values(Permission),
-    }),
-  );
+  let administrator: Role | undefined;
+  for (const definition of ROLE_DEFINITIONS) {
+    const role = await manager.save(
+      manager.create(Role, {
+        siteId: site.id,
+        name: definition.name,
+        permissions: [...definition.permissions],
+      }),
+    );
+    if (definition.name === ADMINISTRATOR_ROLE) administrator = role;
+  }
+  const role = administrator!;
   await manager.save(
     manager.create(SiteMember, {
       siteId: site.id,

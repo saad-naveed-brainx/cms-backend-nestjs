@@ -33,6 +33,10 @@ reach it over REST.
 - **TypeORM strips casts from defaults and treats `gen_random_uuid()` as generated** when it reads the
   schema back. Write `default: () => "'{}'"` (no `::jsonb`) and use `@PrimaryGeneratedColumn('uuid')`,
   or `db:generate` reports false changes. The app still assigns a v7 id in `@BeforeInsert`.
+- **A new `permission` enum value needs its own migration, before any migration that uses it.** Postgres refuses a
+  value in the transaction that added it ("unsafe use of new enum value"), so migrations run one transaction each
+  (`migrationsTransactionMode: 'each'` in `data-source-options.ts`). A value cannot be dropped without rebuilding the type,
+  so that migration's down leaves it.
 - **Drift check.** After migrating, `npm run db:generate -- src/database/migrations/Check` must
   print "No changes in database schema were found". If it generates a file, delete it and find out
   why.
@@ -54,8 +58,11 @@ reach it over REST.
   (12+ characters), never a flag; unset, a new user gets a generated one, printed once, and an
   existing email keeps theirs. It needs the API's `.env` (`DATABASE_URL`, `JWT_SECRET`).
   `ProvisioningRepository` is the second unscoped desk: writes, and only creates (`createTenant`, `createSite`),
-  each in one transaction (`../docs/DECISIONS.md` D-019). A role's permission list is a snapshot: a permission
-  added to `Permission` later reaches existing roles only through a migration.
+  each in one transaction (`../docs/DECISIONS.md` D-019). Every site gets the five roles of `src/auth/roles.ts`
+  (`ROLE_DEFINITIONS`: Administrator, Editor, Author, Contributor, Viewer), and its creator is the Administrator; sites made
+  before that got the other four from the `AddFiveRoles` migration. A role's permission list is a snapshot: a permission
+  added to `Permission` (or a change to `ROLE_DEFINITIONS`) reaches existing roles only through a migration, which copies
+  the lists as literals.
 - **The demo clients** are `npm run demo -- --email <account> [--domain <domain>] [--replace]` (`src/cli/run-demo.ts`,
   `demo/`, DEP-03 minimum, `../docs/DECISIONS.md` D-044): each folder in `demo/` (a `content.json` and `images/`) becomes an
   organisation and a site at `<address>.<domain>` (default `localhost`) owned by that account, through the same services the
@@ -127,11 +134,14 @@ reach it over REST.
   `X-Site-Id`. Reading is for any member, creating needs `content.create`, editing needs `content.edit_any` or `content.edit_own`
   on a page you created. A page's address is its type's prefix plus its slug, fixed at creation; slug and parent change
   only through their own tickets (CNT-04/05/06), and a body naming them or the status is a 400; the status changes
-  through `POST /content/:id/publish` and `/unpublish` (`content.publish`). A page's search fields (SEO-01) are set on
+  through `POST /content/:id/publish` and `/unpublish`: `content.publish` on any page, `content.publish_own` only on a page
+  you created (Authors), else a 403 (a missing page is a 404 first). A page's search fields (SEO-01) are set on
   create and edit and come back with the page, not in list rows: `seoTitle` (up to 200 characters), `seoDescription` (500),
   `canonicalUrl` (a full `https://` or `http://` address, 2000) and `noIndex`; an empty text clears one. The share image
   (`ogImageId`) is refused until the media library. Lists page through `findPage` on the base
-  desk; `GET /content` filters by `type`, `status` and `path` (one exact address, how the admin finds `/home`). Block content is stored as sent, except a text block (`richText`), whose HTML is **cleaned on save**
+  desk; `GET /content` filters by `type`, `status` and `path` (one exact address, how the admin finds `/home`). Each list
+  row carries `author: { id, name }` (the page's creator, `null` once their account is gone), read by joining `users` from
+  this site's own content, so people removed from the site keep their name; never their email. Block content is stored as sent, except a text block (`richText`), whose HTML is **cleaned on save**
   (`src/content/clean-blocks.ts`, `sanitize-html`, BLK-05, `../docs/DECISIONS.md` D-041): paragraphs, line breaks, bold, italic,
   underline, strike, `h2`/`h3`, lists, quotes and `http(s)`/`mailto`/`tel`/on-site links survive, everything else is taken out
   keeping its words. The website draws stored HTML as it is (invariant 5), so nothing else may write a text block.

@@ -50,6 +50,14 @@ vi.setConfig({ testTimeout: 30_000 });
 
 const ADMIN_EMAIL = 'olivia@orchard.test';
 const ALL_PERMISSIONS = Object.values(Permission);
+/** Every site has these five roles (users-roles T1, plan D1). */
+const ROLE_NAMES = [
+  'Administrator',
+  'Editor',
+  'Author',
+  'Contributor',
+  'Viewer',
+];
 
 const sorted = <T>(values: readonly T[]): T[] => [...values].sort();
 
@@ -116,7 +124,7 @@ describe('creating a tenant', () => {
       organizations: 1,
       sites: 1,
       hostnames: 1,
-      roles: 1,
+      roles: 5,
       site_members: 1,
       content_types: 2,
       content: 1,
@@ -141,15 +149,18 @@ describe('creating a tenant', () => {
     expect(site.theme).toEqual({});
     expect(site.settings).toEqual({});
 
-    // One address, the primary one; one Administrator role holding every permission there is; the
-    // admin's membership with that role.
+    // One address, the primary one; the five roles (users-roles T1), the Administrator one holding
+    // every permission there is; the admin's membership with that role.
     const [address] = await dataSource.getRepository(Hostname).find();
     expect(address).toMatchObject({
       siteId: site.id,
       hostname: 'orchard.test',
       isPrimary: true,
     });
-    const [role] = await dataSource.getRepository(Role).find();
+    const roles = await dataSource.getRepository(Role).find();
+    expect(sorted(roles.map((row) => row.name))).toEqual(sorted(ROLE_NAMES));
+    expect(roles.every((row) => row.siteId === site.id)).toBe(true);
+    const role = roles.find((row) => row.name === 'Administrator')!;
     expect(role).toMatchObject({ siteId: site.id, name: 'Administrator' });
     expect(sorted(role.permissions)).toEqual(sorted(ALL_PERMISSIONS));
     const [member] = await dataSource.getRepository(SiteMember).find();
@@ -195,9 +206,9 @@ describe('creating a tenant', () => {
   it('[UC-TS-02] the seeded admin signs in, passes a members.manage route on the site, and the address resolves, all through the real routes', async () => {
     const password = 'orchard-real-flow-pass';
     const result = await provision(tenantInput({ admin: { password } }));
-    const [role] = await dataSource
+    const role = await dataSource
       .getRepository(Role)
-      .findBy({ siteId: result.site.id });
+      .findOneByOrFail({ siteId: result.site.id, name: 'Administrator' });
 
     const signedIn = await login(ADMIN_EMAIL, password);
 
@@ -372,7 +383,7 @@ describe('creating a tenant', () => {
       organizations: 2,
       sites: 2,
       hostnames: 3,
-      roles: 2,
+      roles: 10,
       site_members: 2,
       content_types: 4,
       content: 2,
@@ -393,11 +404,14 @@ describe('creating a tenant', () => {
     const secondRoles = await dataSource
       .getRepository(Role)
       .findBy({ siteId: second.site.id });
-    expect(secondRoles.map((role) => role.name)).toEqual(['Administrator']);
+    expect(sorted(secondRoles.map((role) => role.name))).toEqual(
+      sorted(ROLE_NAMES),
+    );
     const firstRoles = await dataSource
       .getRepository(Role)
       .findBy({ siteId: first.site.id });
-    expect(secondRoles[0].id).not.toBe(firstRoles[0].id);
+    const firstRoleIds = new Set(firstRoles.map((role) => role.id));
+    expect(secondRoles.some((role) => firstRoleIds.has(role.id))).toBe(false);
     const secondTypes = await dataSource
       .getRepository(ContentType)
       .findBy({ siteId: second.site.id });
@@ -683,7 +697,8 @@ describe('creating a tenant', () => {
         site,
       ).toBe(null);
 
-      // Its own role: the one Administrator row on the site is the one the membership holds.
+      // Its own roles: the five of every site (users-roles T1), and the Administrator row on the site
+      // is the one the membership holds.
       const access = await members.findAccess(mine.site.id, mine.admin.id);
       expect(access, site).toMatchObject({ roleName: 'Administrator' });
       expect(sorted(access?.permissions ?? []), site).toEqual(
@@ -692,10 +707,15 @@ describe('creating a tenant', () => {
       const roles = await dataSource
         .getRepository(Role)
         .findBy({ siteId: mine.site.id });
+      expect(sorted(roles.map((role) => role.name)), site).toEqual(
+        sorted(ROLE_NAMES),
+      );
       expect(
-        roles.map((role) => [role.id, role.name]),
+        roles
+          .filter((role) => role.name === 'Administrator')
+          .map((role) => role.id),
         site,
-      ).toEqual([[access?.roleId, 'Administrator']]);
+      ).toEqual([access?.roleId]);
 
       // Its own two content types.
       const owned = await types.findMany(mine.site.id);
@@ -712,9 +732,9 @@ describe('creating a tenant', () => {
       ownedIds.push(...owned.map((type) => type.id));
     }
 
-    // Nothing is shared: two roles and four content types, every id its own.
-    expect(ownedIds).toHaveLength(6);
-    expect(new Set(ownedIds).size).toBe(6);
+    // Nothing is shared: ten roles and four content types, every id its own.
+    expect(ownedIds).toHaveLength(14);
+    expect(new Set(ownedIds).size).toBe(14);
   });
 
   it('[UC-TS-13] the platform desk keeps its five methods, only the provisioning desk touches TypeORM among the new files, the schema is unchanged and the seed script exists', async () => {

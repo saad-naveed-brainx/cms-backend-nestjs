@@ -67,7 +67,7 @@ function isPathTaken(error: unknown): boolean {
  */
 @Injectable()
 export class ContentRepository extends ScopedRepository<Content, PageDefaults> {
-  constructor(dataSource: DataSource) {
+  constructor(private readonly dataSource: DataSource) {
     super(dataSource, Content);
   }
 
@@ -137,13 +137,18 @@ export class ContentRepository extends ScopedRepository<Content, PageDefaults> {
 
   /**
    * One slice of the site's pages, last changed first (ties by id, so every call gives the same
-   * order), with how many pages match in all. Trashed pages are not in it.
+   * order), with how many pages match in all, and the id and name of each page's creator (keyed
+   * by user id). Trashed pages are not in it.
    */
-  list(
+  async list(
     siteId: string,
     { contentTypeId, status, path, limit, offset }: PageListOptions,
-  ): Promise<{ rows: Content[]; total: number }> {
-    return this.findPage(
+  ): Promise<{
+    rows: Content[];
+    total: number;
+    authors: Map<string, { id: string; name: string }>;
+  }> {
+    const { rows, total } = await this.findPage(
       siteId,
       {
         ...(contentTypeId === undefined ? {} : { contentTypeId }),
@@ -152,6 +157,31 @@ export class ContentRepository extends ScopedRepository<Content, PageDefaults> {
       },
       { order: { updatedAt: 'DESC', id: 'DESC' }, limit, offset },
     );
+    const authors = await this.authorsOf(
+      siteId,
+      rows.map((row) => row.id),
+    );
+    return { rows, total, authors };
+  }
+
+  /**
+   * The id and name of whoever created these pages of the site (plan D9 of users-roles). A join
+   * from this site's own content to `users`, so it reaches only people who wrote here, including
+   * people since removed from the site; never their email or password hash.
+   */
+  private async authorsOf(
+    siteId: string,
+    pageIds: string[],
+  ): Promise<Map<string, { id: string; name: string }>> {
+    if (pageIds.length === 0) return new Map();
+    const found: { id: string; name: string }[] = await this.dataSource.query(
+      `SELECT DISTINCT u.id, u.name
+         FROM content c
+         JOIN users u ON u.id = c.created_by
+        WHERE c.site_id = $1 AND c.id = ANY($2::uuid[])`,
+      [siteId, pageIds],
+    );
+    return new Map(found.map((author) => [author.id, author]));
   }
 
   /** The base `create`, except that an address the site already uses is a `PathTakenError`. */
