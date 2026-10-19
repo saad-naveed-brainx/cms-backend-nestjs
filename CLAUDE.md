@@ -52,7 +52,8 @@ reach it over REST.
   hostname and theme, which sign-in returns as `site.primaryHost` and `site.theme` (stored as is, `{}` for a new site) so the
   admin can link to the site and draw its live preview, and `ownsOrganization` (the user owns the site's organisation, so
   may delete it, D-039), and
-  user → the organisations they own). A desk method that needs an
+  user → the organisations they own). The other unscoped desks are `ProvisioningRepository`, `SiteRemovalRepository`
+  and `InvitationAcceptanceRepository` (below). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).
 - **Creating a tenant** is `npm run seed -- --organization … --site … --host … --email … --name …`
@@ -80,6 +81,24 @@ reach it over REST.
   unscoped desk and the only one that deletes a site: one transaction, the owner checked inside it, the site's row
   deleted so every site-owned row cascades. Then `invalidateSite` and `WebsiteCache.forgetHosts` with the addresses read
   before the delete (nothing remembers them afterwards).
+- **Invitations** (`src/invitations/`, users-roles T3, plan D3/D5/D7, `../docs/DECISIONS.md` D-047/D-048/D-050):
+  `POST /invitations` (`{ email, roleId }`), `POST /invitations/:id/renew` and `DELETE /invitations/:id`, all
+  `members.manage` with `X-Site-Id`; `GET /members` also lists `invitations` (newest first, expired ones included, with
+  `expired`). Making one for an email that already has a waiting invite on the site replaces it (new row, link, role,
+  expiry); a member's email is a 409; a role not on the site a 400 (`roleId: …`). The link's secret (`token`, 32 random
+  bytes as base64url) is answered once by create and renew and **never stored**: the table keeps `token_hash`, its SHA-256
+  hex, so a database read hands out no working link; renew replaces it, so the old link stops working. `expires_at` is 7
+  days on. Public: `POST /invitations/lookup` (`{ token }`) and `POST /invitations/accept` (`{ token, password, name? }`),
+  which answers the login answer (`AuthService.signIn`). The email is always the invitation's and the site its row's.
+  Whether the person has an account is decided at accept time: existing, the password goes through
+  `AuthService.checkPassword` (sign-in's one check, which the sign-in limit wraps; a wrong one is a 401, or a 409 "This
+  email already has an account. Sign in to join." when a `name` was sent); new, `name` 1–100 and `password` 12–256.
+  Used, expired, cancelled and unknown links are the same 404. **`InvitationAcceptanceRepository` is the fourth unscoped
+  desk** (D-048): two methods only, `findByTokenHash` and `accept`, one transaction that locks the invitation row
+  (`FOR UPDATE`, so the second of two accepts finds it gone: 404), re-checks expiry, creates or checks the user, adds the
+  membership unless already there, and deletes the invitation; a new account whose email was taken meanwhile rolls back
+  (409, invite kept). Everything else goes through the scoped `InvitationRepository` (provided by `MembersModule`).
+  Deleting a site deletes its invitations (FK cascade).
 - **The media library** (`src/media/`, MED-01/02, `../docs/DECISIONS.md` D-042): `POST /media` (`media.upload`, `X-Site-Id`,
   multipart field `file`, at most 10 MB, else 413) and `GET /media?limit=&offset=` (any member, newest first). sharp decides
   what the file really is (JPEG, PNG or WebP only; anything else, an SVG or over 50 megapixels is a 400), turns it upright,

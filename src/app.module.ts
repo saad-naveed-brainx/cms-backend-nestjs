@@ -9,6 +9,7 @@ import { ContentModule } from './content/content.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { HostnamesModule } from './hostnames/hostnames.module.js';
+import { InvitationsModule } from './invitations/invitations.module.js';
 import { MediaModule } from './media/media.module.js';
 import { MembersModule } from './members/members.module.js';
 import { PlatformModule } from './platform/platform.module.js';
@@ -33,6 +34,7 @@ import { SitesModule } from './sites/sites.module.js';
     HostnamesModule,
     MediaModule,
     MembersModule,
+    InvitationsModule,
     SitesModule,
   ],
   controllers: [AppController],
