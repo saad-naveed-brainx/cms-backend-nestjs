@@ -311,9 +311,15 @@ describe('the last Administrator and the owner', () => {
         .send({ roleId: cafeEditor }),
     ]);
     const outcomes = [beaDemotesCal, calDemotesBea];
-    expect(outcomes.map((res) => res.status).sort()).toEqual([200, 409]);
-    const refused = outcomes.find((res) => res.status === 409);
-    expect(refused?.body.message).toBe(LAST_ADMIN);
+    // Exactly one wins. The other is refused: normally a 409 from the locked transaction, but a 403
+    // if the winner committed before the loser's permission check ran (the loser is an Editor by then).
+    const winners = outcomes.filter((res) => res.status === 200);
+    const losers = outcomes.filter((res) => res.status !== 200);
+    expect(winners).toHaveLength(1);
+    expect(losers).toHaveLength(1);
+    const [loser] = losers;
+    expect([403, 409]).toContain(loser.status);
+    if (loser.status === 409) expect(loser.body.message).toBe(LAST_ADMIN);
     expect(await administratorCount(cafeId)).toBe(1);
   });
 });
