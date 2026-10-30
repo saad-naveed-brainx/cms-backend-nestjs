@@ -99,6 +99,14 @@ reach it over REST.
   membership unless already there, and deletes the invitation; a new account whose email was taken meanwhile rolls back
   (409, invite kept). Everything else goes through the scoped `InvitationRepository` (provided by `MembersModule`).
   Deleting a site deletes its invitations (FK cascade).
+- **The sign-in limit** (`src/auth/login-attempts.service.ts`, users-roles T4, plan D8, `../docs/DECISIONS.md` D-049): 10 wrong
+  passwords for one email (unknown emails too) within 15 minutes pause it until 15 minutes after the 10th. It sits in
+  `AuthService.checkPassword`, so it covers sign-in and accepting an invite with an existing account: a 429 with `Retry-After` and
+  "Too many sign-in attempts. Try again in N minutes.", before any hashing, whatever the password (`SignInPaused`; the global
+  `SignInPausedFilter` adds the header). An attempt counts when it starts, so guesses sent at once cannot slip past; a
+  success clears the email's count, and an attempt that breaks (the database fails) is taken back, so an outage pauses nobody. Counts live in this process's memory (at most 10,000 emails, oldest dropped, old ones pruned
+  on each write): a restart clears them, and **several API processes would each count their own, so revisit D-049 first**.
+  Each test app has its own counts; tests move time by overriding the `LOGIN_CLOCK` provider.
 - **The media library** (`src/media/`, MED-01/02, `../docs/DECISIONS.md` D-042): `POST /media` (`media.upload`, `X-Site-Id`,
   multipart field `file`, at most 10 MB, else 413) and `GET /media?limit=&offset=` (any member, newest first). sharp decides
   what the file really is (JPEG, PNG or WebP only; anything else, an SVG or over 50 megapixels is a 400), turns it upright,
