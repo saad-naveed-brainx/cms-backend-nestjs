@@ -188,6 +188,81 @@ describe('deleting a site', () => {
     await deleteSite(orchard.admin, siteId).expect(204);
   });
 
+  it('[UC-UR-18] deleting a site removes its waiting invitations: their links say no longer valid, and an invited member keeps her account and her other site', async () => {
+    const { api, orchard, maple, dataSource } = world;
+    const siteId = await newSite(orchard.admin, 'Kettle Annex', [
+      'kettle-annex.test',
+    ]);
+    // The world is shared by this file's tests: never leave this site behind, even when a check fails.
+    onTestFinished(async () => {
+      await deleteSite(orchard.admin, siteId);
+    });
+    const onSite = { ...signedIn(orchard.admin), 'X-Site-Id': siteId };
+    const roleOn = async (site: string, name: string) =>
+      (
+        await dataSource.query<{ id: string }[]>(
+          'SELECT id FROM roles WHERE site_id = $1 AND name = $2',
+          [site, name],
+        )
+      )[0].id;
+
+    // Sara is a member of the site being deleted and of Maple Books (site B).
+    const sara = await seedUser(dataSource, {
+      email: 'sara@annex.test',
+      name: 'Sara Sample',
+      password: TEST_PASSWORD,
+    });
+    await seedMembership(dataSource, {
+      siteId,
+      userId: sara.id,
+      roleId: await roleOn(siteId, 'Editor'),
+    });
+    await seedMembership(dataSource, {
+      siteId: maple.siteId,
+      userId: sara.id,
+      roleId: await roleOn(maple.siteId, 'Author'),
+    });
+
+    const tokens: string[] = [];
+    for (const email of ['nina@annex.test', 'otto@annex.test']) {
+      const res = await api()
+        .post('/invitations')
+        .set(onSite)
+        .send({ email, roleId: await roleOn(siteId, 'Contributor') })
+        .expect(201);
+      tokens.push(res.body.token);
+    }
+    for (const token of tokens) {
+      await api().post('/invitations/lookup').send({ token }).expect(200);
+    }
+
+    await deleteSite(orchard.admin, siteId).expect(204);
+
+    const [{ n }] = await dataSource.query<{ n: number }[]>(
+      'SELECT count(*)::int AS n FROM invitations WHERE site_id = $1',
+      [siteId],
+    );
+    expect(n).toBe(0);
+    for (const token of tokens) {
+      const res = await api()
+        .post('/invitations/lookup')
+        .send({ token })
+        .expect(404);
+      expect(res.body.message).toBe(
+        'This invite is no longer valid. Ask for a new one.',
+      );
+    }
+    expect(
+      await dataSource.query('SELECT 1 FROM users WHERE id = $1', [sara.id]),
+    ).toHaveLength(1);
+    expect(
+      await dataSource.query<{ site_id: string }[]>(
+        'SELECT site_id FROM site_members WHERE user_id = $1',
+        [sara.id],
+      ),
+    ).toEqual([{ site_id: maple.siteId }]);
+  });
+
   it('[UC-SD-04] sign-in says, for each site, whether the person owns its organisation, so the admin offers Delete only there', async () => {
     const { api, orchard, maple } = world;
     const me = async (who: Who) =>
