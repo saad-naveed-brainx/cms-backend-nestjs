@@ -1,8 +1,8 @@
 # Demo clients
 
 Two made-up clients for the pitch (D-044): **Kettle & Crumb**, a bakery café, and **Studio Halden**, an
-architecture studio. Each folder is one client: `content.json` (its site, look, content type and pages)
-and `images/` (its pictures and logo). Nothing about them is in the code.
+architecture studio. Each folder is one client: `content.json` (its site, look, content type, people and
+pages) and `images/` (its pictures and logo). Nothing about them is in the code.
 
 ```bash
 npm run demo -- --email admin@demo.test                    # on this computer: <address>.localhost
@@ -13,6 +13,13 @@ npm run demo -- --email admin@demo.test --replace          # delete and make the
 - The sites belong to the account given with `--email`, which owns both organisations: one sign-in
   shows both in the Site switcher. A new account gets `SEED_ADMIN_PASSWORD`, or a generated password
   shown once.
+- Each client's `people` (an Editor, an Author, a Contributor and a Viewer, on `.test` addresses) join its site through
+  the same invitations anyone else uses. A new person's generated password is printed **once**, in that run's output, and
+  is kept nowhere else. Someone who already has an account, as everyone does on a `--replace` (it deletes the site, not
+  accounts), is added back and keeps their password: the output says `existing account, password unchanged`.
+- A page with `"author": "<a people email>"` is created and published as that person, under their own role's rules, so the
+  admin shows them as its author. Only the Editor or the Author can be named, and not on the Home page, which comes with
+  the site; anything else is refused before anything is made. Pages with no `author` are the account's.
 - In blocks, `"picture:shop.jpg"` is replaced with that picture's address in the media library.
 - After `--replace`, a running API may answer the old site for up to a minute (its address memory).
 

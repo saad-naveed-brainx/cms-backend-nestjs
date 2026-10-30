@@ -69,9 +69,13 @@ reach it over REST.
 - **The demo clients** are `npm run demo -- --email <account> [--domain <domain>] [--replace]` (`src/cli/run-demo.ts`,
   `demo/`, DEP-03 minimum, `../docs/DECISIONS.md` D-044): each folder in `demo/` (a `content.json` and `images/`) becomes an
   organisation and a site at `<address>.<domain>` (default `localhost`) owned by that account, through the same services the
-  routes use (provisioning, media, appearance, content types, content, publish). `"picture:<file>"` in blocks becomes the
-  picture's library address. A client already there is refused unless `--replace` (deleted, then made again). It is its own
-  process, so a running API's address memory may answer an old site for up to a minute after `--replace`.
+  routes use (provisioning, invitations, media, appearance, content types, content, publish). `"picture:<file>"` in blocks
+  becomes the picture's library address. `people` (`name`, `email`, `role`) join by invitation (users-roles D10): a new one's
+  generated password is printed once; an email with an account keeps its password ("existing account, password unchanged")
+  and joins through `InvitationAcceptanceRepository.accept`. A page's `author` (a `people` email: the Editor or Author, not
+  on Home; checked when the file is read) is created and published as them, with their role's real permissions. A client
+  already there is refused unless `--replace` (deleted, then made again; accounts stay). It is its own process, so a running
+  API's address memory may answer an old site for up to a minute after `--replace`.
 - **Creating a site from the admin** is `POST /sites` (`name`, `hostnames`, and `organizationId` only when the person
   owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
   an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
