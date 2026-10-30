@@ -25,6 +25,28 @@
   },
   "pictures": ["shop.jpg", "sourdough.jpg", "croissants.jpg", "cafe.jpg", "coffee.jpg", "kneading.jpg", "pastries.jpg", "rye.jpg", "logo.png"],
   "types": [{ "name": "Recipe", "urlPrefix": "/recipes" }],
+  "people": [
+    {
+      "name": "Maya Thornton",
+      "email": "maya@kettle-and-crumb.test",
+      "role": "Editor"
+    },
+    {
+      "name": "Ines Moreau",
+      "email": "ines@kettle-and-crumb.test",
+      "role": "Author"
+    },
+    {
+      "name": "Sami Haddad",
+      "email": "sami@kettle-and-crumb.test",
+      "role": "Contributor"
+    },
+    {
+      "name": "Tom Ashworth",
+      "email": "tom@kettle-and-crumb.test",
+      "role": "Viewer"
+    }
+  ],
   "items": [
     {
       "type": "page",
@@ -144,6 +166,7 @@
       "type": "post",
       "slug": "why-our-sourdough-takes-two-days",
       "title": "Why our sourdough takes two days",
+      "author": "maya@kettle-and-crumb.test",
       "seoDescription": "A long, cold fermentation is the secret behind our country loaf. Here is what happens in those 48 hours.",
       "blocks": [
         {
@@ -162,6 +185,7 @@
       "type": "post",
       "slug": "meet-the-night-shift",
       "title": "Meet the night shift",
+      "author": "maya@kettle-and-crumb.test",
       "seoDescription": "While the town sleeps, three bakers fill our shelves. Meet Tom, Ines and Sami.",
       "blocks": [
         {
@@ -180,6 +204,7 @@
       "type": "post",
       "slug": "autumn-on-the-counter",
       "title": "Autumn on the counter",
+      "author": "ines@kettle-and-crumb.test",
       "seoDescription": "Spiced buns, pear and almond tarts and a new seeded loaf: what is new for autumn.",
       "blocks": [
         {
@@ -229,6 +254,7 @@
       "type": "recipe",
       "slug": "butter-croissants",
       "title": "Butter croissants",
+      "author": "ines@kettle-and-crumb.test",
       "seoDescription": "Laminated dough, cold butter and patience: how we make our croissants.",
       "blocks": [
         {
