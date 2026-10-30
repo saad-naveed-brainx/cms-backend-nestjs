@@ -72,8 +72,9 @@ reach it over REST.
   routes use (provisioning, invitations, media, appearance, content types, content, publish). `"picture:<file>"` in blocks
   becomes the picture's library address. `people` (`name`, `email`, `role`) join by invitation (users-roles D10): a new one's
   generated password is printed once; an email with an account keeps its password ("existing account, password unchanged")
-  and joins through `InvitationAcceptanceRepository.accept`. A page's `author` (a `people` email: the Editor or Author, not
-  on Home; checked when the file is read) is created and published as them, with their role's real permissions. A client
+  and joins through `InvitationAcceptanceRepository.accept`; `--email` may not be one of them. A page's `author` (a `people`
+  email: the Editor or Author, not on Home) is created and published as them, with their role's real permissions. All of
+  that is checked before anything is made. A client
   already there is refused unless `--replace` (deleted, then made again; accounts stay). It is its own process, so a running
   API's address memory may answer an old site for up to a minute after `--replace`.
 - **Creating a site from the admin** is `POST /sites` (`name`, `hostnames`, and `organizationId` only when the person

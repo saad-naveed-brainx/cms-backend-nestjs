@@ -16,7 +16,8 @@ npm run demo -- --email admin@demo.test --replace          # delete and make the
 - Each client's `people` (an Editor, an Author, a Contributor and a Viewer, on `.test` addresses) join its site through
   the same invitations anyone else uses. A new person's generated password is printed **once**, in that run's output, and
   is kept nowhere else. Someone who already has an account, as everyone does on a `--replace` (it deletes the site, not
-  accounts), is added back and keeps their password: the output says `existing account, password unchanged`.
+  accounts), is added back and keeps their password: the output says `existing account, password unchanged`. The
+  `--email` account owns the sites, so it cannot be one of the `people`: that is refused before anything is made.
 - A page with `"author": "<a people email>"` is created and published as that person, under their own role's rules, so the
   admin shows them as its author. Only the Editor or the Author can be named, and not on the Home page, which comes with
   the site; anything else is refused before anything is made. Pages with no `author` are the account's.

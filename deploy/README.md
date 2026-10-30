@@ -127,6 +127,9 @@ SEED_ADMIN_PASSWORD='<12 or more characters>' npm run demo -- \
 With an account that already exists, its password is kept and `SEED_ADMIN_PASSWORD` can be left out.
 Running it again refuses to make a client twice; `--replace` deletes and remakes them.
 
+The first run also adds four people to each site and prints those eight people's passwords once, in its output. Keep
+them: they are shown nowhere else, and a later run keeps each person's password without showing it.
+
 ## 9. Check
 
 - `https://kettle-and-crumb.nodepress.brainxdemo.com/` and `https://studio-halden.nodepress.brainxdemo.com/`

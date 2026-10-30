@@ -4,12 +4,21 @@ import type {
   Type,
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { readFileSync, readdirSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import request from 'supertest';
 import type { DataSource } from 'typeorm';
 import { PasswordService } from '../src/auth/password.service.js';
 import { runDemo } from '../src/cli/run-demo.js';
+import { ProvisioningService } from '../src/provisioning/provisioning.service.js';
 import { createTestApp } from './support/app.js';
 import { resetDatabase } from './support/database.js';
 
@@ -353,5 +362,76 @@ describe('npm run demo', () => {
       expect(said).not.toContain(password);
       await api().post('/auth/login').send({ email, password }).expect(200);
     }
+  });
+
+  it('[UC-UR-27] a bad file is refused before anything is made or deleted, even with --replace', async () => {
+    const owner = 'owner@refused.test';
+    const domain = 'refused.test';
+    const address = 'bad-client';
+    // A site at the address the bad files name, so `--replace` would delete it if it got that far.
+    await app.get(ProvisioningService).provisionTenant({
+      organizationName: 'Bad Client Ltd',
+      siteName: 'Bad Client',
+      hostnames: [`${address}.${domain}`],
+      admin: { email: owner, name: 'Owner' },
+    });
+
+    const folder = mkdtempSync(join(tmpdir(), 'demo-refused-'));
+    onTestFinished(() => rmSync(folder, { recursive: true, force: true }));
+    mkdirSync(join(folder, 'client'));
+    const everyRow = () =>
+      dataSource.query(
+        `SELECT (SELECT array_agg(id ORDER BY id) FROM sites) AS sites,
+                (SELECT array_agg(id ORDER BY id) FROM users) AS users,
+                (SELECT count(*)::int FROM invitations) AS invitations`,
+      );
+    const refused = async (file: DemoClient, email: string) => {
+      writeFileSync(
+        join(folder, 'client', 'content.json'),
+        JSON.stringify({ ...file, address }),
+      );
+      const before = await everyRow();
+      const run = await demo([
+        '--email',
+        email,
+        '--domain',
+        domain,
+        '--replace',
+        '--from',
+        folder,
+      ]);
+      expect(run.code).toBe(1);
+      expect(await everyRow()).toEqual(before);
+      return run.errors.join('\n');
+    };
+
+    const [client] = demoClients();
+    const page = client.items.findIndex(({ author }) => author);
+    expect(
+      await refused(
+        {
+          ...client,
+          items: client.items.with(page, {
+            ...client.items[page],
+            author: 'nobody@refused.test',
+          }),
+        },
+        owner,
+      ),
+    ).toMatch(/nobody@refused\.test is not in people/);
+
+    // The clash from any spelling of the address: the account's is the stored, lower-case one.
+    expect(
+      await refused(
+        {
+          ...client,
+          people: [
+            ...client.people,
+            { name: 'Owner', email: owner, role: 'Viewer' },
+          ],
+        },
+        'Owner@Refused.test',
+      ),
+    ).toMatch(/owner@refused\.test owns the demo sites.*Use another --email/);
   });
 });

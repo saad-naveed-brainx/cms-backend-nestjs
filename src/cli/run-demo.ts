@@ -445,6 +445,19 @@ export async function runDemo(
     return 1;
   }
 
+  // The account owns every site, so it cannot join one as a person: its invitation would be refused
+  // halfway, after the site was made (or, with `--replace`, the old one deleted).
+  const owner = args.email.trim().toLowerCase();
+  const clash = clients.find(({ client }) =>
+    client.people.some((person) => person.email === owner),
+  );
+  if (clash) {
+    io.err(
+      `${owner} owns the demo sites, so it cannot also be one of ${clash.client.site}'s people. Use another --email.`,
+    );
+    return 1;
+  }
+
   let app: DemoApp;
   try {
     app = await openApp();
@@ -474,6 +487,10 @@ export async function runDemo(
   if (exitCode === 0) {
     io.out(
       `Done. Sign in as ${args.email}: the Site switcher lists ${clients.map((one) => one.client.site).join(' and ')}.`,
+    );
+  } else {
+    io.err(
+      'A failed run may already have made accounts: their passwords are shown only in this output, so keep it.',
     );
   }
 
