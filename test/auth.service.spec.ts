@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { AuthService } from '../src/auth/auth.service.js';
+import { LoginAttempts } from '../src/auth/login-attempts.service.js';
 import type { PasswordService } from '../src/auth/password.service.js';
 import { Permission } from '../src/auth/permission.js';
 import type { TokenService } from '../src/auth/token.service.js';
@@ -88,8 +89,9 @@ function setUp(
     desk as unknown as PlatformRepository,
     passwords as unknown as PasswordService,
     tokens as unknown as TokenService,
+    new LoginAttempts(),
   );
-  return { service, passwordCalls, signedFor };
+  return { service, desk, passwordCalls, signedFor };
 }
 
 describe('AuthService', () => {
@@ -102,6 +104,44 @@ describe('AuthService', () => {
     // Once, and only the dummy: the time taken must not show that the email is unknown.
     expect(passwordCalls).toEqual(['verifyAgainstDummy']);
     expect(signedFor).toEqual([]);
+  });
+
+  it('[UC-UR-19] a database failure is not a wrong guess, so an outage pauses nobody', async () => {
+    const ayesha = userRow('ayesha@corrick.test', 'Ayesha');
+    const { service, desk } = setUp([ayesha]);
+    const outage = vi
+      .spyOn(desk, 'findUserByEmail')
+      .mockRejectedValue(new Error('database down'));
+
+    for (let attempt = 1; attempt <= 12; attempt += 1) {
+      await expect(service.login(ayesha.email, PASSWORD)).rejects.toThrow(
+        'database down',
+      );
+    }
+    outage.mockRestore();
+
+    const result = await service.login(ayesha.email, PASSWORD);
+    expect(result?.user.id).toBe(ayesha.id);
+  });
+
+  it('[UC-UR-19] an outage takes back only its own attempt: the wrong guesses around it still count', async () => {
+    const ayesha = userRow('ayesha@corrick.test', 'Ayesha');
+    const { service, desk } = setUp([ayesha]);
+
+    for (let attempt = 1; attempt <= 9; attempt += 1) {
+      await service.login(ayesha.email, 'not the password');
+    }
+    vi.spyOn(desk, 'findUserByEmail').mockRejectedValueOnce(
+      new Error('database down'),
+    );
+    await expect(service.login(ayesha.email, PASSWORD)).rejects.toThrow(
+      'database down',
+    );
+    await service.login(ayesha.email, 'not the password');
+
+    await expect(service.login(ayesha.email, PASSWORD)).rejects.toThrow(
+      'Too many sign-in attempts. Try again in 15 minutes.',
+    );
   });
 
   it('[UC-AU-05] a wrong password for a real account is the same null, after a real check', async () => {

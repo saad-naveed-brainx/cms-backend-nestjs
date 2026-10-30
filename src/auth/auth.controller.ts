@@ -27,7 +27,8 @@ export class AuthController {
 
   /**
    * Public. Wrong credentials are always the same 401 message, an unknown email included. A body
-   * that is not an email and a password is a 400, decided before any database call.
+   * that is not an email and a password is a 400, decided before any database call. An email the
+   * sign-in limit has paused is a 429 with `Retry-After`, whatever the password.
    */
   @Public()
   @Post('login')
