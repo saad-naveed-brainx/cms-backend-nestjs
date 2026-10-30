@@ -25,6 +25,28 @@
   },
   "pictures": ["concrete.jpg", "villa.jpg", "forest-house.jpg", "courtyard.jpg", "facade.jpg", "stairs.jpg", "interior.jpg", "model.jpg", "logo.png"],
   "types": [{ "name": "Project", "urlPrefix": "/projects" }],
+  "people": [
+    {
+      "name": "Nora Solberg",
+      "email": "nora@studio-halden.test",
+      "role": "Editor"
+    },
+    {
+      "name": "Jonas Vik",
+      "email": "jonas@studio-halden.test",
+      "role": "Author"
+    },
+    {
+      "name": "Eline Dahl",
+      "email": "eline@studio-halden.test",
+      "role": "Contributor"
+    },
+    {
+      "name": "Henrik Aas",
+      "email": "henrik@studio-halden.test",
+      "role": "Viewer"
+    }
+  ],
   "items": [
     {
       "type": "page",
@@ -190,6 +212,7 @@
       "type": "project",
       "slug": "courtyard-house",
       "title": "Courtyard House",
+      "author": "jonas@studio-halden.test",
       "seoDescription": "A city house built around a quiet concrete courtyard.",
       "blocks": [
         {
@@ -214,6 +237,7 @@
       "type": "project",
       "slug": "nordvik-library",
       "title": "Nordvik Library",
+      "author": "jonas@studio-halden.test",
       "seoDescription": "A public library whose patterned facade filters light into the reading rooms.",
       "blocks": [
         {
@@ -238,6 +262,7 @@
       "type": "post",
       "slug": "why-we-build-models",
       "title": "Why we still build models",
+      "author": "nora@studio-halden.test",
       "seoDescription": "In an age of renderings, why every Studio Halden project still starts on the model table.",
       "blocks": [
         {
@@ -256,6 +281,7 @@
       "type": "post",
       "slug": "designing-for-daylight",
       "title": "Designing for daylight",
+      "author": "nora@studio-halden.test",
       "seoDescription": "Bergen has long summer evenings and short winter days. How we plan rooms around the light.",
       "blocks": [
         {
