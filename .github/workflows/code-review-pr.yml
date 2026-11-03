@@ -1,0 +1,86 @@
+name: Code Review PR Score
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr_score:
+    # Fork PRs get a read-only token and can't comment.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Compute PR score from the ledger
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$BASE_REF"
+
+          # Commits in this PR. The hooks' own "chore(code-review):" follow-up
+          # commits carry the ledger/records, so they're not reviewed themselves.
+          git log --no-merges --format='%H%x09%s' "origin/${BASE_REF}..${HEAD_SHA}" \
+            | awk -F'\t' '$2 !~ /^chore\(code-review\):/ {print $1}' > shas.txt
+
+          # Ledger written by hooks/post-commit (one JSON object per line).
+          # Skip any malformed lines instead of failing the whole job.
+          if [ -f .code-reviews/ledger.jsonl ]; then
+            jq -R 'fromjson? // empty' .code-reviews/ledger.jsonl | jq -s '.' > ledger.json
+          else
+            echo '[]' > ledger.json
+          fi
+
+          jq -n -r --slurpfile ledger ledger.json --rawfile shas shas.txt '
+            def n(f; g): (f // g // 0);
+            ($shas | split("\n") | map(select(length > 0))) as $commits
+            | $ledger[0] as $l
+            | [ $commits[] as $c
+                | { sha: $c,
+                    e: ($l | map(select(.commit == $c)) | last) } ] as $rows
+            | [ $rows[] | select(.e != null and .e.score != null) ] as $reviewed
+            | ($commits | length) as $total
+            | ($reviewed | length) as $nrev
+            | ($total - $nrev) as $unrev
+            | (if $nrev == 0 then null
+               else (([$reviewed[].e.score] | add) / $nrev | round) end) as $score
+            | (if $total == 0 then "neutral"
+               elif $unrev == 0 and ($reviewed | all(.e.status == "pass")) then "pass"
+               else "fail" end) as $status
+            | def sum(f): [$reviewed[].e | f] | add // 0;
+              "<!-- brainx-code-review-score -->\n"
+              + "## Code Review Score: \(if $score == null then "n/a" else "\($score)/100" end) — \($status | ascii_upcase)\n\n"
+              + "\($total) commit(s) in this PR: \($nrev) reviewed, \($unrev) unreviewed. "
+              + "Score is the average of the per-commit scores in `.code-reviews/ledger.jsonl`.\n\n"
+              + "| Commit | Score | Status | Critical | High | Medium | Low | Skipped |\n"
+              + "|---|---|---|---|---|---|---|---|\n"
+              + ( [ $rows[]
+                    | .sha[0:7] as $s
+                    | if .e != null and .e.score != null then
+                        "| `\($s)` | \(.e.score) | \(.e.status) | \(n(.e.critical; 0)) | \(n(.e.high; .e.major)) | \(n(.e.medium; .e.minor)) | \(n(.e.low; .e.nit)) | \(n(.e.skipped; 0)) |"
+                      else
+                        "| `\($s)` | — | unreviewed | — | — | — | — | — |"
+                      end
+                  ] | join("\n") )
+              + "\n\n**Totals (reviewed commits):** "
+              + "\(sum(n(.critical; 0))) critical, \(sum(n(.high; .major))) high, "
+              + "\(sum(n(.medium; .minor))) medium, \(sum(n(.low; .nit))) low, "
+              + "\(sum(n(.skipped; 0))) skipped, \(sum(n(.ignored; 0))) ignored.\n"
+              + (if $unrev > 0 then "\n> ⚠️ Unreviewed commits were made without the review hook (e.g. `--no-verify`) or are missing from the ledger.\n" else "" end)
+          ' > comment.md
+
+          cat comment.md
+
+          # Update the bot's previous comment on new pushes instead of stacking new ones.
+          gh pr comment "$PR_NUMBER" --body-file comment.md --edit-last --create-if-none
