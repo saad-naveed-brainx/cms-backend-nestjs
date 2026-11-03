@@ -13,6 +13,6 @@ import { SiteMemberRepository } from './site-member.repository.js';
 @Module({
   controllers: [MembersController],
   providers: [SiteMemberRepository, InvitationRepository, MembersService],
-  exports: [SiteMemberRepository, InvitationRepository],
+  exports: [SiteMemberRepository, InvitationRepository, MembersService],
 })
 export class MembersModule {}

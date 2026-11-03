@@ -1,0 +1,147 @@
+{
+  "organization": "Studio Halden AS",
+  "site": "Studio Halden Journal",
+  "address": "studio-halden-journal",
+  "appearance": {
+    "tagline": "Notes from the studio",
+    "footerNote": "Studio Halden · Fjordgata 12, Bergen · journal@halden.example",
+    "logo": "logo.png",
+    "theme": {
+      "typeSet": "technical",
+      "shape": "sharp",
+      "density": "comfortable",
+      "texture": "grid",
+      "palette": {
+        "paper": "#f4f3f0",
+        "surface": "#ffffff",
+        "ink": "#141414",
+        "muted": "#55534e",
+        "line": "#d9d6cf",
+        "brand": "#141414",
+        "onBrand": "#ffffff",
+        "accent": "#7d4f22"
+      }
+    }
+  },
+  "pictures": [
+    "concrete.jpg",
+    "courtyard.jpg",
+    "model.jpg",
+    "logo.png"
+  ],
+  "types": [],
+  "people": [
+    {
+      "name": "Jonas Vik",
+      "email": "jonas@studio-halden.test",
+      "role": "Editor"
+    },
+    {
+      "name": "Nora Solberg",
+      "email": "nora@studio-halden.test",
+      "role": "Viewer"
+    },
+    {
+      "name": "Ingrid Lund",
+      "email": "ingrid@studio-halden.test",
+      "role": "Author"
+    },
+    {
+      "name": "Mats Berg",
+      "email": "mats@studio-halden.test",
+      "role": "Contributor"
+    }
+  ],
+  "items": [
+    {
+      "type": "page",
+      "slug": "home",
+      "title": "Home",
+      "seoTitle": "Studio Halden Journal — notes from an architecture studio in Bergen",
+      "seoDescription": "How the studio thinks, works and builds: short essays and process notes from Studio Halden.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "The journal",
+          "headline": "Notes from the studio",
+          "body": "Short essays and process notes on materials, sites and the slow work of making buildings last.",
+          "primaryAction": {
+            "label": "Read the latest",
+            "href": "/blog"
+          },
+          "image": {
+            "src": "picture:model.jpg",
+            "alt": "A white architectural model on a studio table"
+          }
+        },
+        {
+          "type": "imageText",
+          "heading": "Written by the people who draw",
+          "body": "Everything here is written by the architects and model-makers at Studio Halden. We write when something on a project taught us something worth keeping.",
+          "image": {
+            "src": "picture:concrete.jpg",
+            "alt": "Board-marked concrete wall in soft light"
+          },
+          "imagePosition": "right"
+        }
+      ]
+    },
+    {
+      "type": "page",
+      "slug": "about",
+      "title": "About the journal",
+      "seoDescription": "Why Studio Halden keeps a journal, and how to get in touch.",
+      "blocks": [
+        {
+          "type": "richText",
+          "heading": "Why a journal",
+          "html": "<p>A building takes years, and most of what we learn on the way is forgotten by the next project. The journal is where we write it down: what worked, what did not, and what we would do differently.</p><p>Comments, corrections and questions are welcome: <a href=\"mailto:journal@halden.example\">journal@halden.example</a>.</p>"
+        }
+      ]
+    },
+    {
+      "type": "post",
+      "slug": "what-a-model-teaches",
+      "title": "What a model teaches that a drawing cannot",
+      "author": "ingrid@studio-halden.test",
+      "seoDescription": "A week with a 1:50 model of the forest house changed three decisions about the roof.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Process",
+          "headline": "What a model teaches that a drawing cannot",
+          "image": {
+            "src": "picture:model.jpg",
+            "alt": "A white architectural model on a studio table"
+          }
+        },
+        {
+          "type": "richText",
+          "html": "<p>For the forest house we had drawn the roof a dozen times, and it looked right every time. Then we built it at 1:50 and held it up to a window: the overhang shaded the wrong side of the courtyard.</p><p>Three decisions changed that week. The drawing had been correct; it had simply been silent about light. A model is never silent.</p>"
+        }
+      ]
+    },
+    {
+      "type": "post",
+      "slug": "concrete-in-the-rain",
+      "title": "Concrete in the rain",
+      "author": "jonas@studio-halden.test",
+      "seoDescription": "Why we keep a wet-weather photo diary of every concrete wall we build.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Materials",
+          "headline": "Concrete in the rain",
+          "image": {
+            "src": "picture:courtyard.jpg",
+            "alt": "A courtyard with pale concrete walls after rain"
+          }
+        },
+        {
+          "type": "richText",
+          "html": "<p>Every wall we pour gets a photo diary: the day it is stripped, after its first winter, after its fifth. Rain is the honest test. A good wall darkens evenly and dries into the same colour; a poor one stains in stripes.</p><p>The diaries are how we decide next year's mix.</p>"
+        }
+      ]
+    }
+  ]
+}

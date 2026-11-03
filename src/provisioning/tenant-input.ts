@@ -36,6 +36,26 @@ export const siteInputSchema = z.strictObject({
 
 export type SiteInput = z.infer<typeof siteInputSchema>;
 
+/**
+ * What it takes to create an organisation (organizations T2): a name, tidied (trimmed) and then 1 to
+ * 100 characters, kept exactly as typed (the screens escape; nothing is stripped on the way in). It
+ * need not be unique. A NUL character is refused: Postgres cannot store one in text, and the answer
+ * should be a 400, not a 500. Strict like the site's: a field that is not listed (an owner) is
+ * refused, never ignored, because the caller always owns what they create.
+ */
+export const organizationInputSchema = z.strictObject({
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .refine((name) => !name.includes('\u0000'), {
+      message: 'must not contain a NUL character',
+    }),
+});
+
+export type OrganizationInput = z.infer<typeof organizationInputSchema>;
+
 /** The input is not acceptable. `problems` is one readable line each, and the message lists them all. */
 export class ProvisionInputError extends Error {
   readonly problems: string[];

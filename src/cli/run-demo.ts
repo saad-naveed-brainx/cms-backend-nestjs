@@ -301,24 +301,42 @@ async function makeClient(
   }
 
   const known = await app.platform.findUserByEmail(args.email);
-  const made = await app.provisioning.provisionTenant({
-    organizationName: client.organization,
-    siteName: client.site,
-    hostnames: [host],
-    admin: {
-      email: args.email,
-      name: args.name,
-      ...(known || !env.SEED_ADMIN_PASSWORD
-        ? {}
-        : { password: env.SEED_ADMIN_PASSWORD }),
-    },
-  });
-  if (made.admin.generatedPassword !== undefined) {
-    io.out(
-      `  New account ${args.email}. Generated password (shown once, keep it safe): ${made.admin.generatedPassword}`,
-    );
+  // A company with several websites (organizations T4): the account's organization of this name, if
+  // there is one (the first by id when earlier runs left several), gets this website too; otherwise
+  // this file makes the organization, with the account if it is new.
+  const organization = known
+    ? (await app.platform.findOrganizationsOwnedBy(known.id)).find(
+        (one) => one.name === client.organization,
+      )
+    : undefined;
+  let siteId: string;
+  if (known && organization) {
+    const added = await app.provisioning.provisionSite(known.id, {
+      name: client.site,
+      hostnames: [host],
+      organizationId: organization.id,
+    });
+    siteId = added.site.id;
+  } else {
+    const made = await app.provisioning.provisionTenant({
+      organizationName: client.organization,
+      siteName: client.site,
+      hostnames: [host],
+      admin: {
+        email: args.email,
+        name: args.name,
+        ...(known || !env.SEED_ADMIN_PASSWORD
+          ? {}
+          : { password: env.SEED_ADMIN_PASSWORD }),
+      },
+    });
+    if (made.admin.generatedPassword !== undefined) {
+      io.out(
+        `  New account ${args.email}. Generated password (shown once, keep it safe): ${made.admin.generatedPassword}`,
+      );
+    }
+    siteId = made.site.id;
   }
-  const siteId = made.site.id;
   const user = (await app.platform.findUserByEmail(args.email))!;
   const access: SiteAccess = {
     siteId,
@@ -404,6 +422,35 @@ async function makeClient(
 }
 
 /**
+ * After a `--replace`, takes away the account's empty organizations that carry a demo company's name:
+ * what earlier runs left behind, since each used to make a new organization. The first by id of each
+ * name is the one the websites went into and is kept; an organization with a website is never removed.
+ */
+async function removeLeftovers(
+  app: DemoApp,
+  args: DemoArgs,
+  clients: { client: ClientFile }[],
+  io: DemoIo,
+): Promise<void> {
+  const owner = await app.platform.findUserByEmail(args.email);
+  if (!owner) return;
+  const owned = await app.platform.findOrganizationsOwnedBy(owner.id);
+  for (const name of new Set(clients.map((one) => one.client.organization))) {
+    let removed = 0;
+    for (const extra of owned.filter((one) => one.name === name).slice(1)) {
+      if (await app.removal.removeEmptyOrganization(owner.id, extra.id)) {
+        removed += 1;
+      }
+    }
+    if (removed > 0) {
+      io.out(
+        `  Removed ${removed} empty leftover organization${removed === 1 ? '' : 's'} named ${name} from earlier runs.`,
+      );
+    }
+  }
+}
+
+/**
  * The demo command, as a function: 0 when every client was made, 1 otherwise. It writes only to `io`.
  * The account is made when it does not exist (its password is `SEED_ADMIN_PASSWORD`, else one is made
  * up and shown once), and owns every demo client's organisation, so one sign-in shows them all. The
@@ -485,8 +532,10 @@ export async function runDemo(
     }
   }
   if (exitCode === 0) {
+    if (args.replace) await removeLeftovers(app, args, clients, io);
+    const companies = new Set(clients.map((one) => one.client.organization));
     io.out(
-      `Done. Sign in as ${args.email}: the Site switcher lists ${clients.map((one) => one.client.site).join(' and ')}.`,
+      `Done. Sign in as ${args.email}: ${companies.size} organization${companies.size === 1 ? '' : 's'} and ${clients.length} website${clients.length === 1 ? '' : 's'} (${clients.map((one) => one.client.site).join(', ')}).`,
     );
   } else {
     io.err(

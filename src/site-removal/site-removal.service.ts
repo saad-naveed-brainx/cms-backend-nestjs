@@ -40,4 +40,20 @@ export class SiteRemovalService {
     // Its rows went with the site; its pictures' files are on disk.
     await this.media.removeSite(siteId);
   }
+
+  /**
+   * Deletes an organisation of this person's that has no website, and says whether it did. One with a
+   * website, someone else's and one that is not there are all `false`, and nothing is deleted.
+   */
+  async removeEmptyOrganization(
+    userId: string,
+    organizationId: string,
+  ): Promise<boolean> {
+    if (!isUuid(organizationId)) return false;
+    const removal = await this.sites.deleteEmptyOrganization(
+      organizationId,
+      userId,
+    );
+    return removal.outcome === 'deleted';
+  }
 }

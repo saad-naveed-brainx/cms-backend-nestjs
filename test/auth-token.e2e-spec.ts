@@ -60,11 +60,19 @@ describe('GET /auth/me and the token guard', () => {
           site: {
             id: corrick.site.id,
             name: 'Corrick',
+            organizationId: corrick.site.organizationId,
             primaryHost: 'corrick.test',
             theme: {},
           },
           role: { id: corrick.editor.id, name: 'Editor' },
           permissions: [Permission.ContentCreate, Permission.ContentPublish],
+          ownsOrganization: false,
+        },
+      ],
+      organizations: [
+        {
+          id: corrick.site.organizationId,
+          name: 'Agency',
           ownsOrganization: false,
         },
       ],
@@ -101,11 +109,19 @@ describe('GET /auth/me and the token guard', () => {
           site: {
             id: corrick.site.id,
             name: 'Corrick',
+            organizationId: corrick.site.organizationId,
             primaryHost: 'corrick.test',
             theme: {},
           },
           role: { id: corrick.editor.id, name: 'Editor' },
           permissions: changed,
+          ownsOrganization: false,
+        },
+      ],
+      organizations: [
+        {
+          id: corrick.site.organizationId,
+          name: 'Agency',
           ownsOrganization: false,
         },
       ],

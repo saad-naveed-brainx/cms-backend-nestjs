@@ -12,6 +12,7 @@ import { HostnamesModule } from './hostnames/hostnames.module.js';
 import { InvitationsModule } from './invitations/invitations.module.js';
 import { MediaModule } from './media/media.module.js';
 import { MembersModule } from './members/members.module.js';
+import { OrganizationsModule } from './organizations/organizations.module.js';
 import { PlatformModule } from './platform/platform.module.js';
 import { ProvisioningModule } from './provisioning/provisioning.module.js';
 import { PublicModule } from './public/public.module.js';
@@ -29,6 +30,7 @@ import { SitesModule } from './sites/sites.module.js';
     ContentTypesModule,
     PlatformModule,
     ProvisioningModule,
+    OrganizationsModule,
     PublicModule,
     SiteRemovalModule,
     HostnamesModule,

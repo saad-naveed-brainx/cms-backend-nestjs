@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, QueryFailedError } from 'typeorm';
 import {
   Invitation,
+  Organization,
   Role,
   Site,
   SiteMember,
@@ -14,6 +15,9 @@ export type FoundInvitation = {
   id: string;
   siteId: string;
   siteName: string;
+  /** The site's organisation, so the invite page can name it (organizations T1). */
+  organizationId: string;
+  organizationName: string;
   roleName: string;
   email: string;
   expiresAt: Date;
@@ -70,6 +74,11 @@ export class InvitationAcceptanceRepository {
       .createQueryBuilder('invitation')
       .innerJoin(Site, 'site', 'site.id = invitation.siteId')
       .innerJoin(
+        Organization,
+        'organization',
+        'organization.id = site.organizationId',
+      )
+      .innerJoin(
         Role,
         'role',
         'role.siteId = invitation.siteId AND role.id = invitation.roleId',
@@ -78,6 +87,8 @@ export class InvitationAcceptanceRepository {
       .select('invitation.id', 'id')
       .addSelect('invitation.siteId', 'siteId')
       .addSelect('site.name', 'siteName')
+      .addSelect('site.organizationId', 'organizationId')
+      .addSelect('organization.name', 'organizationName')
       .addSelect('role.name', 'roleName')
       .addSelect('invitation.email', 'email')
       .addSelect('invitation.expiresAt', 'expiresAt')
@@ -87,6 +98,8 @@ export class InvitationAcceptanceRepository {
         id: string;
         siteId: string;
         siteName: string;
+        organizationId: string;
+        organizationName: string;
         roleName: string;
         email: string;
         expiresAt: Date;

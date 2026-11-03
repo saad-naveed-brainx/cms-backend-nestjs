@@ -88,8 +88,8 @@ const ADDRESS_UNIQUE_CONSTRAINT = 'hostnames_hostname_key';
  *
  * Kept narrow on purpose:
  * - It only creates. It reads nothing for anyone else, updates nothing and deletes nothing, and
- *   `createTenant` and `createSite` are its only methods: a helper belongs in a plain function
- *   outside this class.
+ *   `createTenant`, `createSite` and `createOrganization` are its only methods: a helper belongs
+ *   in a plain function outside this class.
  * - Every site-owned row it writes carries the id of the site it has just created, never one
  *   passed in, so it cannot write into an existing tenant (invariant 1).
  * - Nothing else may use it: tenants and sites are created through `ProvisioningService`.
@@ -152,6 +152,20 @@ export class ProvisioningRepository {
       if (!owned) throw new NotOrganizationOwnerError();
       return createSiteRows(manager, data);
     });
+  }
+
+  /**
+   * Makes an organisation owned by `ownerId`, with no site yet (organizations T2). The name is
+   * already tidied. Nothing is checked about the owner: the caller is the person signed in.
+   */
+  async createOrganization(
+    ownerId: string,
+    name: string,
+  ): Promise<{ id: string; name: string }> {
+    const organization = await this.dataSource.manager.save(
+      this.dataSource.manager.create(Organization, { name, ownerId }),
+    );
+    return { id: organization.id, name: organization.name };
   }
 }
 

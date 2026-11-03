@@ -13,6 +13,7 @@ import {
 import {
   NotOrganizationOwnerError,
   OrganizationRequiredError,
+  organizationInputSchema,
   ProvisionInputError,
   siteInputSchema,
   tenantInputSchema,
@@ -123,6 +124,18 @@ export class ProvisioningService {
   /** The organisations this person owns: the ones they may add a site to. */
   ownedOrganizations(userId: string): Promise<{ id: string; name: string }[]> {
     return this.platform.findOrganizationsOwnedBy(userId);
+  }
+
+  /**
+   * Makes an organisation the person owns (organizations T2, D-056): any signed-in person may, with no
+   * limit and no check that the name is new. Throws `ProvisionInputError` for a name it cannot accept.
+   */
+  async createOrganization(
+    userId: string,
+    rawInput: unknown,
+  ): Promise<{ id: string; name: string }> {
+    const input = parseWith(organizationInputSchema, rawInput);
+    return this.repository.createOrganization(userId, input.name);
   }
 
   /**

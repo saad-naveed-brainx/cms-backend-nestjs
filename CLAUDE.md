@@ -51,8 +51,11 @@ reach it over REST.
   (host → site, email or id → user, user → their memberships, which also reads `site_members`, `roles` and each site's primary
   hostname and theme, which sign-in returns as `site.primaryHost` and `site.theme` (stored as is, `{}` for a new site) so the
   admin can link to the site and draw its live preview, and `ownsOrganization` (the user owns the site's organisation, so
-  may delete it, D-039), and
-  user → the organisations they own). The other unscoped desks are `ProvisioningRepository`, `SiteRemovalRepository`
+  may delete it, D-039), and the site's organisation (`site.organizationId`), and
+  user → the organisations they own). Sign-in, `/auth/me` and the invite accept answer also carry `organizations`
+  (`{ id, name, ownsOrganization }`, by name): `AuthService` builds them from the memberships plus the organisations the person
+  owns, so one with no website yet is there too (organizations T1, `../docs/DECISIONS.md` D-054); the platform desk has no
+  method for it. The other unscoped desks are `ProvisioningRepository`, `SiteRemovalRepository`
   and `InvitationAcceptanceRepository` (below). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).
@@ -67,20 +70,38 @@ reach it over REST.
   added to `Permission` (or a change to `ROLE_DEFINITIONS`) reaches existing roles only through a migration, which copies
   the lists as literals.
 - **The demo clients** are `npm run demo -- --email <account> [--domain <domain>] [--replace]` (`src/cli/run-demo.ts`,
-  `demo/`, DEP-03 minimum, `../docs/DECISIONS.md` D-044): each folder in `demo/` (a `content.json` and `images/`) becomes an
-  organisation and a site at `<address>.<domain>` (default `localhost`) owned by that account, through the same services the
-  routes use (provisioning, invitations, media, appearance, content types, content, publish). `"picture:<file>"` in blocks
+  `demo/`, DEP-03 minimum, `../docs/DECISIONS.md` D-044): each folder in `demo/` (a `content.json` and `images/`) becomes
+  a site at `<address>.<domain>` (default `localhost`) owned by that account, through the same services the
+  routes use (provisioning, invitations, media, appearance, content types, content, publish). Folders sharing an
+  `organization` name share one organisation (organizations T4): the first makes it (`provisionTenant`), the others add a
+  website to the account's organisation of that name (`provisionSite`), the first by id when earlier runs left several.
+  Four folders, two companies of two websites each. `"picture:<file>"` in blocks
   becomes the picture's library address. `people` (`name`, `email`, `role`) join by invitation (users-roles D10): a new one's
   generated password is printed once; an email with an account keeps its password ("existing account, password unchanged")
   and joins through `InvitationAcceptanceRepository.accept`; `--email` may not be one of them. A page's `author` (a `people`
   email: the Editor or Author, not on Home) is created and published as them, with their role's real permissions. All of
   that is checked before anything is made. A client
-  already there is refused unless `--replace` (deleted, then made again; accounts stay). It is its own process, so a running
-  API's address memory may answer an old site for up to a minute after `--replace`.
+  already there is refused unless `--replace` (deleted, then made again; accounts and organisations stay; then the account's
+  empty organisations named like a demo company, minus the one used, are removed through
+  `SiteRemovalService.removeEmptyOrganization`: one with a website, or someone else's, never). It is its own process, so a
+  running API's address memory may answer an old site for up to a minute after `--replace`.
 - **Creating a site from the admin** is `POST /sites` (`name`, `hostnames`, and `organizationId` only when the person
-  owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
-  an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
-  `createTenant`, so a site made here and one made by the seed command are the same. It calls `invalidateSite` (below).
+  owns several organisations), and the organisation routes are in `src/organizations/`: `GET /organizations` (the ones
+  they own) and `POST /organizations` (`{ name }`, 201 `{ id, name }`, organizations T2, `../docs/DECISIONS.md` D-056).
+  All need a sign-in and no `X-Site-Id`; only an organisation's owner may add a site to it (checked inside the
+  transaction), and `createSite` shares its rows with `createTenant`, so a site made here and one made by the seed
+  command are the same. It calls `invalidateSite` (below). **Anyone signed in may create an organisation** (no limit, no
+  unique name; trimmed, 1 to 100 characters, kept as typed, a NUL character is a 400; the body is strict, so an
+  `ownerId` is refused: the caller always owns it). The provisioning desk's three methods are pinned by UC-TS-13.
+- **The company team** is `GET /organizations/:id/team` (`src/organizations/organization-team.service.ts`, organizations T3,
+  `../docs/DECISIONS.md` D-054). Nothing is stored for it: it is read from each website's own people through
+  `MembersService.list(siteId)` (the scoped members desk: every read carries its `siteId`) and merged by person, so someone
+  on no website is on no team. The websites are the owner's own memberships in the organisation (an owner is an Administrator
+  of every website of theirs: made one on creating it, never removable or demotable), so no new method on the platform desk.
+  200 for the owner; 403 for a member who is not; one 404 with one message for everyone else (another owner, a stranger,
+  an unknown id, an id that is not a uuid; an upper-case id is lower-cased); the owner check comes before any read. The
+  answer is `{ organization, websites: [{ id, name, roles }], people: [{ userId, name, email, isOwner, access: [{ siteId, role }] }],
+  invitations: [{ id, email, siteId, role, expiresAt, expired }] }`, all by name (invitations by email), and holds no secret.
 - **Deleting a site** is `DELETE /sites/:id` (`src/site-removal/`, `../docs/DECISIONS.md` D-039): signed in, no `X-Site-Id`; only the
   owner of the site's organisation (a member who is not is a 403, anyone else a 404). `SiteRemovalRepository` is the third
   unscoped desk and the only one that deletes a site: one transaction, the owner checked inside it, the site's row
@@ -93,7 +114,8 @@ reach it over REST.
   expiry); a member's email is a 409; a role not on the site a 400 (`roleId: …`). The link's secret (`token`, 32 random
   bytes as base64url) is answered once by create and renew and **never stored**: the table keeps `token_hash`, its SHA-256
   hex, so a database read hands out no working link; renew replaces it, so the old link stops working. `expires_at` is 7
-  days on. Public: `POST /invitations/lookup` (`{ token }`) and `POST /invitations/accept` (`{ token, password, name? }`),
+  days on. Public: `POST /invitations/lookup` (`{ token }`, answering `site: { id, name }`, `organization: { id, name }`,
+  `role: { name }`, `email`, `hasAccount`, `expiresAt`) and `POST /invitations/accept` (`{ token, password, name? }`),
   which answers the login answer (`AuthService.signIn`). The email is always the invitation's and the site its row's.
   Whether the person has an account is decided at accept time: existing, the password goes through
   `AuthService.checkPassword` (sign-in's one check, which the sign-in limit wraps; a wrong one is a 401, or a 409 "This
@@ -170,6 +192,12 @@ reach it over REST.
   is fingerprinted before and after in every table that has a `site_id` column (found from the database, so a new tenant table
   is included without anyone remembering). The marking of `ids` and `disposable` is by hand, which is the one thing the test
   cannot check for you.
+  The routes that came with organizations (`POST /organizations`, whose row's owner column is `owner_id`, and `GET /organizations/:id/team`)
+  are in the table too (organizations T5). `test/organization-isolation.e2e-spec.ts` proves what the sweeps cannot: that a person on one
+  website of an organization has nothing on its other websites, whatever their role (UC-OR-09), that one organization's owner learns
+  nothing of another's and changes nothing of it through the organization routes (UC-OR-10), and that a person on two organizations is
+  on each team with that organization's website and role only (UC-OR-11). A sweep that creates organizations gives its owner several,
+  and then `POST /sites` must name the organization (a 400 otherwise), which the suite's `disposable()` does.
 - **Every route needs a token unless it is marked `@Public()`** (global guard, `src/auth/`). A site-scoped route
   (`@SiteScoped()`, `@RequirePermission(...)`) also needs the `X-Site-Id` header. Permissions are looked up per
   request, not read from the token. `JWT_SECRET` must be set (32+ characters in production); the test configs set

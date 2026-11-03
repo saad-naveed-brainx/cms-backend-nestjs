@@ -11,6 +11,8 @@ export type Membership = {
   site: {
     id: string;
     name: string;
+    /** The organisation the site belongs to (organizations T1). */
+    organizationId: string;
     primaryHost: string | null;
     theme: Record<string, unknown>;
   };
@@ -22,16 +24,28 @@ export type Membership = {
 
 type PublicUser = { id: string; email: string; name: string };
 
-/** What `/auth/me` answers: who the token belongs to, as the database has it now. */
-export type Profile = { user: PublicUser; memberships: Membership[] };
+/**
+ * An organisation the user owns, or has a website in (organizations T1). One they own with no
+ * website yet is here too: it has no membership to come from.
+ */
+export type OrganizationSummary = {
+  id: string;
+  name: string;
+  ownsOrganization: boolean;
+};
 
-export type LoginResult = {
+/** What `/auth/me` answers: who the token belongs to, as the database has it now. */
+export type Profile = {
+  user: PublicUser;
+  memberships: Membership[];
+  organizations: OrganizationSummary[];
+};
+
+export type LoginResult = Profile & {
   accessToken: string;
   tokenType: 'Bearer';
   /** ISO 8601. */
   expiresAt: string;
-  user: PublicUser;
-  memberships: Membership[];
 };
 
 /**
@@ -103,7 +117,7 @@ export class AuthService {
 
   /** A fresh token for the user, with their memberships as they are now. */
   private async answerFor(user: PublicUser): Promise<LoginResult> {
-    const memberships = await this.memberships(user.id);
+    const { memberships, organizations } = await this.access(user.id);
     const { token, expiresAt } = await this.tokens.sign(user.id);
     return {
       accessToken: token,
@@ -111,6 +125,7 @@ export class AuthService {
       expiresAt: expiresAt.toISOString(),
       user,
       memberships,
+      organizations,
     };
   }
 
@@ -118,20 +133,44 @@ export class AuthService {
   async profile(userId: string): Promise<Profile | null> {
     const user = await this.platform.findUserById(userId);
     if (!user) return null;
-    return {
-      user: toPublicUser(user),
-      memberships: await this.memberships(user.id),
-    };
+    return { user: toPublicUser(user), ...(await this.access(user.id)) };
   }
 
-  private async memberships(userId: string): Promise<Membership[]> {
-    const rows = await this.platform.findMembershipsByUserId(userId);
-    return rows.map(({ site, role, ownsOrganization }) => ({
-      site,
-      role: { id: role.id, name: role.name },
-      permissions: role.permissions,
-      ownsOrganization,
-    }));
+  /**
+   * The websites the user is on and the organisations they own or have a website in. No query of
+   * its own: the memberships already say each website's organisation, and the platform desk's one
+   * read of the organisations a person owns adds the ones with no website yet.
+   */
+  private async access(
+    userId: string,
+  ): Promise<Pick<Profile, 'memberships' | 'organizations'>> {
+    const [rows, owned] = await Promise.all([
+      this.platform.findMembershipsByUserId(userId),
+      this.platform.findOrganizationsOwnedBy(userId),
+    ]);
+
+    const memberships: Membership[] = rows.map(
+      ({ site, role, ownsOrganization }) => ({
+        site,
+        role: { id: role.id, name: role.name },
+        permissions: role.permissions,
+        ownsOrganization,
+      }),
+    );
+
+    const organizations = new Map<string, OrganizationSummary>();
+    for (const { organization, ownsOrganization } of rows) {
+      organizations.set(organization.id, { ...organization, ownsOrganization });
+    }
+    for (const { id, name } of owned) {
+      organizations.set(id, { id, name, ownsOrganization: true });
+    }
+    return {
+      memberships,
+      organizations: [...organizations.values()].sort(
+        (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+      ),
+    };
   }
 }
 

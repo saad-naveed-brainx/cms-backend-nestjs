@@ -18,8 +18,10 @@ const PASSWORD = 'correct horse battery staple';
 const EXPIRES_AT = new Date('2026-10-14T12:00:00.000Z');
 
 type DeskMembership = {
-  site: { id: string; name: string };
+  site: { id: string; name: string; organizationId: string };
   role: { id: string; name: string; permissions: Permission[] };
+  organization: { id: string; name: string };
+  ownsOrganization: boolean;
 };
 
 /** A user as the desk hands it over: the whole row, stored hash included. */
@@ -39,24 +41,39 @@ function membership(
   roleName: string,
   permissions: Permission[],
 ): DeskMembership {
+  const organization = { id: randomUUID(), name: `${siteName} Group` };
   return {
-    site: { id: randomUUID(), name: siteName },
+    site: { id: randomUUID(), name: siteName, organizationId: organization.id },
     role: { id: randomUUID(), name: roleName, permissions },
+    organization,
+    ownsOrganization: false,
   };
 }
 
 /** What a client should be told about a desk membership: the permissions sit beside the role. */
-function shown({ site, role }: DeskMembership) {
+function shown({ site, role, ownsOrganization }: DeskMembership) {
   return {
     site,
     role: { id: role.id, name: role.name },
     permissions: role.permissions,
+    ownsOrganization,
   };
+}
+
+/** The organisations a client is told about for these memberships, by name. */
+function organizationsOf(...found: DeskMembership[]) {
+  return found
+    .map(({ organization, ownsOrganization }) => ({
+      ...organization,
+      ownsOrganization,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function setUp(
   users: User[],
   memberships: Record<string, DeskMembership[]> = {},
+  owned: Record<string, { id: string; name: string }[]> = {},
 ) {
   const desk = {
     findUserByEmail: async (email: string) =>
@@ -64,6 +81,7 @@ function setUp(
     findUserById: async (id: string) =>
       users.find((user) => user.id === id) ?? null,
     findMembershipsByUserId: async (id: string) => memberships[id] ?? [],
+    findOrganizationsOwnedBy: async (id: string) => owned[id] ?? [],
   };
 
   const passwordCalls: string[] = [];
@@ -176,6 +194,7 @@ describe('AuthService', () => {
       expiresAt: '2026-10-14T12:00:00.000Z',
       user: { id: ayesha.id, email: 'ayesha@corrick.test', name: 'Ayesha' },
       memberships: [shown(editor)],
+      organizations: organizationsOf(editor),
     });
     expect(signedFor).toEqual([ayesha.id]);
     expect(passwordCalls).toEqual(['verify']);
@@ -211,8 +230,10 @@ describe('AuthService', () => {
 
     // In the order the desk gave them, each with its own role and nothing from the other site.
     expect(asDana?.memberships).toEqual([shown(onBakery), shown(onCorrick)]);
+    expect(asDana?.organizations).toEqual(organizationsOf(onBakery, onCorrick));
     expect(asChen).not.toBeNull();
     expect(asChen?.memberships).toEqual([]);
+    expect(asChen?.organizations).toEqual([]);
   });
 
   it('[UC-AU-04] [UC-AU-09] the profile is read afresh on every call, and is null once the user is gone', async () => {
@@ -226,6 +247,7 @@ describe('AuthService', () => {
     expect(await service.profile(ayesha.id)).toEqual({
       user: { id: ayesha.id, email: 'ayesha@corrick.test', name: 'Ayesha' },
       memberships: [shown(before)],
+      organizations: organizationsOf(before),
     });
 
     // Her name and her role's permissions change; the next call shows both, nothing is remembered.
@@ -245,6 +267,7 @@ describe('AuthService', () => {
         name: 'Ayesha Khan',
       },
       memberships: [shown(after)],
+      organizations: organizationsOf(after),
     });
 
     // The account is deleted: there is no profile to give.
