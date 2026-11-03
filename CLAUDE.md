@@ -93,6 +93,15 @@ reach it over REST.
   command are the same. It calls `invalidateSite` (below). **Anyone signed in may create an organisation** (no limit, no
   unique name; trimmed, 1 to 100 characters, kept as typed, a NUL character is a 400; the body is strict, so an
   `ownerId` is refused: the caller always owns it). The provisioning desk's three methods are pinned by UC-TS-13.
+- **The company team** is `GET /organizations/:id/team` (`src/organizations/organization-team.service.ts`, organizations T3,
+  `../docs/DECISIONS.md` D-054). Nothing is stored for it: it is read from each website's own people through
+  `MembersService.list(siteId)` (the scoped members desk: every read carries its `siteId`) and merged by person, so someone
+  on no website is on no team. The websites are the owner's own memberships in the organisation (an owner is an Administrator
+  of every website of theirs: made one on creating it, never removable or demotable), so no new method on the platform desk.
+  200 for the owner; 403 for a member who is not; one 404 with one message for everyone else (another owner, a stranger,
+  an unknown id, an id that is not a uuid; an upper-case id is lower-cased); the owner check comes before any read. The
+  answer is `{ organization, websites: [{ id, name, roles }], people: [{ userId, name, email, isOwner, access: [{ siteId, role }] }],
+  invitations: [{ id, email, siteId, role, expiresAt, expired }] }`, all by name (invitations by email), and holds no secret.
 - **Deleting a site** is `DELETE /sites/:id` (`src/site-removal/`, `../docs/DECISIONS.md` D-039): signed in, no `X-Site-Id`; only the
   owner of the site's organisation (a member who is not is a 403, anyone else a 404). `SiteRemovalRepository` is the third
   unscoped desk and the only one that deletes a site: one transaction, the owner checked inside it, the site's row
