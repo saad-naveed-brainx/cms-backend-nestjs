@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PlatformRepository } from '../platform/platform.repository.js';
+import { LoginAttempts } from './login-attempts.service.js';
 import { PasswordService } from './password.service.js';
 import type { Permission } from './permission.js';
+import { SignInPaused } from './sign-in-paused.filter.js';
 import { TokenService } from './token.service.js';
 
 /** One site the user belongs to, with its main web address, their role there and what that role allows. */
@@ -43,6 +45,7 @@ export class AuthService {
     private readonly platform: PlatformRepository,
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
+    private readonly attempts: LoginAttempts,
   ) {}
 
   /** `email` is already known to be an email. It is trimmed and lower-cased here, the password never. */
@@ -54,24 +57,38 @@ export class AuthService {
   /**
    * The account with this email when `password` is its password, else `null` (an unknown email
    * too). The ONE place a password is checked for signing in, so sign-in and accepting an invite
-   * with an existing account behave alike (and the sign-in limit, users-roles T4, wraps this).
+   * with an existing account behave alike, and both fall under the sign-in limit (plan D8): a
+   * paused email is a `SignInPaused` (429), before any hashing.
    */
   async checkPassword(
     email: string,
     password: string,
   ): Promise<PublicUser | null> {
-    const user = await this.platform.findUserByEmail(
-      email.trim().toLowerCase(),
-    );
-    if (!user) {
-      // Same work as a wrong password, so the time taken does not say the email is unknown.
-      await this.passwords.verifyAgainstDummy(password);
-      return null;
+    const address = email.trim().toLowerCase();
+    const paused = this.attempts.check(address);
+    if (paused) throw new SignInPaused(paused.retryAfterSeconds);
+
+    // Counted here and cleared by a success, not counted after the hashing: guesses sent all at
+    // once would otherwise all pass the check above before the first of them had failed.
+    this.attempts.fail(address);
+
+    try {
+      const user = await this.platform.findUserByEmail(address);
+      if (!user) {
+        // Same work as a wrong password, so the time taken does not say the email is unknown.
+        await this.passwords.verifyAgainstDummy(password);
+        return null;
+      }
+      if (!(await this.passwords.verify(password, user.passwordHash))) {
+        return null;
+      }
+      this.attempts.succeed(address);
+      return toPublicUser(user);
+    } catch (error) {
+      // Something broke (the database, say), so no guess was made: an outage pauses nobody.
+      this.attempts.retract(address);
+      throw error;
     }
-    if (!(await this.passwords.verify(password, user.passwordHash))) {
-      return null;
-    }
-    return toPublicUser(user);
   }
 
   /**

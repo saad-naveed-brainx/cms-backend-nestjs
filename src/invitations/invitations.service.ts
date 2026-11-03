@@ -139,8 +139,8 @@ export class InvitationsService {
    * with an existing one is decided here, now, by whether the invitation's email has an account:
    * - existing: `password` is checked as at sign-in; `name` is otherwise ignored. A wrong password
    *   is a 401, or, when a name was sent (the person filled in the new-account form, so the
-   *   account appeared after they opened the page), the 409 "already has an account". Either way
-   *   the invitation stays;
+   *   account appeared after they opened the page), the 409 "already has an account". An email
+   *   the sign-in limit has paused is a 429 instead. Either way the invitation stays;
    * - new: `name` (1–100 after trimming) and `password` (12–256) are required; the account is made
    *   with the invitation's email.
    * The desk then does everything else in one transaction (see `InvitationAcceptanceRepository`).
