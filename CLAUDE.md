@@ -70,16 +70,21 @@ reach it over REST.
   added to `Permission` (or a change to `ROLE_DEFINITIONS`) reaches existing roles only through a migration, which copies
   the lists as literals.
 - **The demo clients** are `npm run demo -- --email <account> [--domain <domain>] [--replace]` (`src/cli/run-demo.ts`,
-  `demo/`, DEP-03 minimum, `../docs/DECISIONS.md` D-044): each folder in `demo/` (a `content.json` and `images/`) becomes an
-  organisation and a site at `<address>.<domain>` (default `localhost`) owned by that account, through the same services the
-  routes use (provisioning, invitations, media, appearance, content types, content, publish). `"picture:<file>"` in blocks
+  `demo/`, DEP-03 minimum, `../docs/DECISIONS.md` D-044): each folder in `demo/` (a `content.json` and `images/`) becomes
+  a site at `<address>.<domain>` (default `localhost`) owned by that account, through the same services the
+  routes use (provisioning, invitations, media, appearance, content types, content, publish). Folders sharing an
+  `organization` name share one organisation (organizations T4): the first makes it (`provisionTenant`), the others add a
+  website to the account's organisation of that name (`provisionSite`), the first by id when earlier runs left several.
+  Four folders, two companies of two websites each. `"picture:<file>"` in blocks
   becomes the picture's library address. `people` (`name`, `email`, `role`) join by invitation (users-roles D10): a new one's
   generated password is printed once; an email with an account keeps its password ("existing account, password unchanged")
   and joins through `InvitationAcceptanceRepository.accept`; `--email` may not be one of them. A page's `author` (a `people`
   email: the Editor or Author, not on Home) is created and published as them, with their role's real permissions. All of
   that is checked before anything is made. A client
-  already there is refused unless `--replace` (deleted, then made again; accounts stay). It is its own process, so a running
-  API's address memory may answer an old site for up to a minute after `--replace`.
+  already there is refused unless `--replace` (deleted, then made again; accounts and organisations stay; then the account's
+  empty organisations named like a demo company, minus the one used, are removed through
+  `SiteRemovalService.removeEmptyOrganization`: one with a website, or someone else's, never). It is its own process, so a
+  running API's address memory may answer an old site for up to a minute after `--replace`.
 - **Creating a site from the admin** is `POST /sites` (`name`, `hostnames`, and `organizationId` only when the person
   owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
   an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with

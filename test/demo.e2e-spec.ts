@@ -19,8 +19,10 @@ import type { DataSource } from 'typeorm';
 import { PasswordService } from '../src/auth/password.service.js';
 import { runDemo } from '../src/cli/run-demo.js';
 import { ProvisioningService } from '../src/provisioning/provisioning.service.js';
+import { Organization } from '../src/database/entities/index.js';
 import { createTestApp } from './support/app.js';
 import { resetDatabase } from './support/database.js';
+import { TEST_PASSWORD, seedUser } from './support/seed.js';
 
 /**
  * The demo command (DEP-03 minimum, D-044) end to end: the real `runDemo` with the real demo files in
@@ -32,12 +34,14 @@ import { resetDatabase } from './support/database.js';
  * sign-in and the uploaded files.
  */
 
-// Two clients: 18 pictures through sharp, two sites, 17 pages and items.
+// Four websites (two companies, two each): 26 pictures through sharp, 26 pages and items.
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 60_000 });
 
 const PASSWORD = 'demo-owner-password-123';
 let app: INestApplication;
 let dataSource: DataSource;
+/** What the first run (UC-DM-01) printed: the organizations test reads which passwords it showed. */
+let firstRun: { code: number; output: string[]; errors: string[] };
 
 const api = () => request(app.getHttpServer());
 const lines = () => {
@@ -102,10 +106,17 @@ describe('npm run demo', () => {
       '--domain',
       'demo.test',
     ]);
+    firstRun = run;
     expect(run.errors).toEqual([]);
     expect(run.code).toBe(0);
     expect(run.output.join('\n')).toMatch(
       /Kettle & Crumb at kettle-and-crumb\.demo\.test: 9 pictures, 1 content type, 9 pages/,
+    );
+    expect(run.output.join('\n')).toMatch(
+      /Kettle & Crumb Wholesale at kettle-and-crumb-wholesale\.demo\.test: 4 pictures, 0 content type, 4 pages/,
+    );
+    expect(run.output.join('\n')).toMatch(
+      /Studio Halden Journal at studio-halden-journal\.demo\.test: 4 pictures, 0 content type, 4 pages/,
     );
     expect(run.output.join('\n')).toMatch(
       /Studio Halden at studio-halden\.demo\.test: 9 pictures, 1 content type, 9 pages/,
@@ -125,7 +136,13 @@ describe('npm run demo', () => {
       ),
     ).toEqual([
       ['Kettle & Crumb', 'kettle-and-crumb.demo.test', true],
+      [
+        'Kettle & Crumb Wholesale',
+        'kettle-and-crumb-wholesale.demo.test',
+        true,
+      ],
       ['Studio Halden', 'studio-halden.demo.test', true],
+      ['Studio Halden Journal', 'studio-halden-journal.demo.test', true],
     ]);
 
     // The bakery's front page: its own blocks, its logo and look, and pictures that really load.
@@ -184,6 +201,156 @@ describe('npm run demo', () => {
     await site('kettle-and-crumb.demo.test', '/projects').expect(404);
   });
 
+  it('[UC-OR-07] makes a company with two websites and people spread across them', async () => {
+    // Read from what UC-DM-01's run made.
+    const organizations = await dataSource.query<
+      { name: string; websites: number; owner: string }[]
+    >(
+      `SELECT o.name,
+              (SELECT count(*)::int FROM sites s WHERE s.organization_id = o.id) AS websites,
+              u.email AS owner
+         FROM organizations o
+         JOIN users u ON u.id = o.owner_id
+        ORDER BY o.name, o.id`,
+    );
+    expect(organizations).toEqual([
+      { name: 'Kettle & Crumb Ltd', websites: 2, owner: 'owner@demo.test' },
+      { name: 'Studio Halden AS', websites: 2, owner: 'owner@demo.test' },
+    ]);
+    const websitesOf = await dataSource.query<{ org: string; site: string }[]>(
+      `SELECT o.name AS org, s.name AS site
+         FROM sites s JOIN organizations o ON o.id = s.organization_id
+        ORDER BY o.name, s.name`,
+    );
+    expect(websitesOf.map(({ org, site }) => `${org} > ${site}`)).toEqual([
+      'Kettle & Crumb Ltd > Kettle & Crumb',
+      'Kettle & Crumb Ltd > Kettle & Crumb Wholesale',
+      'Studio Halden AS > Studio Halden',
+      'Studio Halden AS > Studio Halden Journal',
+    ]);
+
+    // The owner's sign-in lists both companies, each owned.
+    const login = await api()
+      .post('/auth/login')
+      .send({ email: 'owner@demo.test', password: PASSWORD })
+      .expect(200);
+    expect(login.body.organizations).toEqual([
+      {
+        id: expect.any(String),
+        name: 'Kettle & Crumb Ltd',
+        ownsOrganization: true,
+      },
+      {
+        id: expect.any(String),
+        name: 'Studio Halden AS',
+        ownsOrganization: true,
+      },
+    ]);
+
+    // Who is what where: some people on one website only, some on both with another role.
+    const roleOn = async (email: string, site: string) =>
+      (
+        await dataSource.query<{ role: string }[]>(
+          `SELECT r.name AS role
+             FROM site_members m
+             JOIN users u ON u.id = m.user_id
+             JOIN sites s ON s.id = m.site_id
+             JOIN roles r ON r.site_id = m.site_id AND r.id = m.role_id
+            WHERE u.email = $1 AND s.name = $2`,
+          [email, site],
+        )
+      )[0]?.role ?? null;
+    const bakery = 'Kettle & Crumb';
+    const wholesale = 'Kettle & Crumb Wholesale';
+    const studio = 'Studio Halden';
+    const journal = 'Studio Halden Journal';
+    const k = (name: string) => `${name}@kettle-and-crumb.test`;
+    const h = (name: string) => `${name}@studio-halden.test`;
+    expect({
+      maya: [
+        await roleOn(k('maya'), bakery),
+        await roleOn(k('maya'), wholesale),
+      ],
+      tom: [await roleOn(k('tom'), bakery), await roleOn(k('tom'), wholesale)],
+      ines: [
+        await roleOn(k('ines'), bakery),
+        await roleOn(k('ines'), wholesale),
+      ],
+      sami: [
+        await roleOn(k('sami'), bakery),
+        await roleOn(k('sami'), wholesale),
+      ],
+      wilma: [
+        await roleOn(k('wilma'), bakery),
+        await roleOn(k('wilma'), wholesale),
+      ],
+      pia: [await roleOn(k('pia'), bakery), await roleOn(k('pia'), wholesale)],
+      jonas: [
+        await roleOn(h('jonas'), studio),
+        await roleOn(h('jonas'), journal),
+      ],
+      nora: [await roleOn(h('nora'), studio), await roleOn(h('nora'), journal)],
+      eline: [
+        await roleOn(h('eline'), studio),
+        await roleOn(h('eline'), journal),
+      ],
+      henrik: [
+        await roleOn(h('henrik'), studio),
+        await roleOn(h('henrik'), journal),
+      ],
+      ingrid: [
+        await roleOn(h('ingrid'), studio),
+        await roleOn(h('ingrid'), journal),
+      ],
+      mats: [await roleOn(h('mats'), studio), await roleOn(h('mats'), journal)],
+    }).toEqual({
+      maya: ['Editor', 'Viewer'],
+      tom: ['Viewer', 'Editor'],
+      ines: ['Author', null],
+      sami: ['Contributor', null],
+      wilma: [null, 'Author'],
+      pia: [null, 'Contributor'],
+      jonas: ['Author', 'Editor'],
+      nora: ['Editor', 'Viewer'],
+      eline: ['Contributor', null],
+      henrik: ['Viewer', null],
+      ingrid: [null, 'Author'],
+      mats: [null, 'Contributor'],
+    });
+
+    // Each website has its own published pages.
+    const wholesaleHome = await site(
+      'kettle-and-crumb-wholesale.demo.test',
+    ).expect(200);
+    expect(wholesaleHome.body.page.title).toBe('Home');
+    await site('kettle-and-crumb-wholesale.demo.test', '/ordering').expect(200);
+    expect(
+      (await site('kettle-and-crumb-wholesale.demo.test', '/blog').expect(200))
+        .body.listing.total,
+    ).toBe(1);
+    expect(
+      (await site('studio-halden-journal.demo.test', '/blog').expect(200)).body
+        .listing.total,
+    ).toBe(2);
+    // …and nothing of its sibling's.
+    await site('kettle-and-crumb-wholesale.demo.test', '/visit-us').expect(404);
+
+    // A new person's password is printed once; someone met again is "existing account".
+    const printed = firstRun.output.join('\n');
+    expect(
+      printed.match(/New account wilma@kettle-and-crumb\.test/g),
+    ).toHaveLength(1);
+    expect(
+      printed.match(/New account tom@kettle-and-crumb\.test/g),
+    ).toHaveLength(1);
+    expect(printed).toContain(
+      'tom@kettle-and-crumb.test (Editor): existing account, password unchanged.',
+    );
+    expect(printed).toContain(
+      'maya@kettle-and-crumb.test (Viewer): existing account, password unchanged.',
+    );
+  });
+
   it('[UC-DM-02] run again, it refuses to make a client twice; with --replace it deletes and remakes them, pictures and all', async () => {
     const again = await demo([
       '--email',
@@ -215,7 +382,78 @@ describe('npm run demo', () => {
     const [{ n }] = await dataSource.query(
       `SELECT count(*)::int AS n FROM sites`,
     );
-    expect(n).toBe(2);
+    expect(n).toBe(4);
+  });
+
+  it('[UC-OR-08] --replace reuses the organization, removes empty leftovers, and accounts keep their passwords', async () => {
+    // Leftovers of earlier runs: the account's own empty organizations named like the companies, and
+    // someone else's empty organization that happens to share a name.
+    const [{ id: ownerId }] = await dataSource.query<{ id: string }[]>(
+      `SELECT id FROM users WHERE email = 'owner@demo.test'`,
+    );
+    const organizations = dataSource.getRepository(Organization);
+    await organizations.save({ name: 'Kettle & Crumb Ltd', ownerId });
+    await organizations.save({ name: 'Studio Halden AS', ownerId });
+    const other = await seedUser(dataSource, {
+      email: 'someone-else@elsewhere.test',
+      name: 'Someone Else',
+      password: TEST_PASSWORD,
+    });
+    await organizations.save({ name: 'Kettle & Crumb Ltd', ownerId: other.id });
+
+    const summary = () =>
+      dataSource.query<{ owner: string; name: string; websites: number }[]>(
+        `SELECT u.email AS owner, o.name,
+                (SELECT count(*)::int FROM sites s WHERE s.organization_id = o.id) AS websites
+           FROM organizations o
+           JOIN users u ON u.id = o.owner_id
+          ORDER BY u.email, o.name, o.id`,
+      );
+    const accounts = () =>
+      dataSource.query<{ email: string; password_hash: string }[]>(
+        `SELECT email, password_hash FROM users ORDER BY email`,
+      );
+    const passwordsBefore = await accounts();
+    const expected = [
+      { owner: 'owner@demo.test', name: 'Kettle & Crumb Ltd', websites: 2 },
+      { owner: 'owner@demo.test', name: 'Studio Halden AS', websites: 2 },
+      // Untouched: not the account's, and empty.
+      {
+        owner: 'someone-else@elsewhere.test',
+        name: 'Kettle & Crumb Ltd',
+        websites: 0,
+      },
+    ];
+    const everyone = demoClients().flatMap((client) => client.people);
+
+    for (const attempt of ['first', 'second']) {
+      const run = await demo([
+        '--email',
+        'owner@demo.test',
+        '--domain',
+        'demo.test',
+        '--replace',
+      ]);
+      expect(run.errors, `the ${attempt} --replace`).toEqual([]);
+      expect(run.code).toBe(0);
+      expect(await summary(), `after the ${attempt} --replace`).toEqual(
+        expected,
+      );
+
+      // Every person was met again: no new account, no new password.
+      const said = run.output.join('\n');
+      expect(
+        said.match(/existing account, password unchanged/gi) ?? [],
+      ).toHaveLength(everyone.length);
+      expect(said).not.toMatch(/Generated password/);
+      expect(await accounts()).toEqual(passwordsBefore);
+    }
+
+    // The bakery has its owner and its four people again.
+    const [{ n }] = await dataSource.query<{ n: number }[]>(
+      `SELECT count(*)::int AS n FROM site_members m JOIN sites s ON s.id = m.site_id WHERE s.name = 'Kettle & Crumb'`,
+    );
+    expect(n).toBe(5);
   });
 
   it('[UC-DM-02] a missing account or a bad domain is refused before anything is made', async () => {

@@ -1,0 +1,192 @@
+{
+  "organization": "Kettle & Crumb Ltd",
+  "site": "Kettle & Crumb Wholesale",
+  "address": "kettle-and-crumb-wholesale",
+  "appearance": {
+    "tagline": "Bread for cafés and restaurants",
+    "footerNote": "Wholesale orders: wholesale@kettleandcrumb.example · Delivery Tuesday to Saturday, before 7am",
+    "logo": "logo.png",
+    "theme": {
+      "typeSet": "editorial",
+      "shape": "soft",
+      "density": "comfortable",
+      "texture": "grain",
+      "palette": {
+        "paper": "#fbf6ee",
+        "surface": "#ffffff",
+        "ink": "#2b1d14",
+        "muted": "#6a5444",
+        "line": "#e6d8c3",
+        "brand": "#2f5d3a",
+        "onBrand": "#ffffff",
+        "accent": "#8f5a00"
+      }
+    }
+  },
+  "pictures": [
+    "shop.jpg",
+    "sourdough.jpg",
+    "croissants.jpg",
+    "logo.png"
+  ],
+  "types": [],
+  "people": [
+    {
+      "name": "Tom Ashworth",
+      "email": "tom@kettle-and-crumb.test",
+      "role": "Editor"
+    },
+    {
+      "name": "Maya Thornton",
+      "email": "maya@kettle-and-crumb.test",
+      "role": "Viewer"
+    },
+    {
+      "name": "Wilma Roth",
+      "email": "wilma@kettle-and-crumb.test",
+      "role": "Author"
+    },
+    {
+      "name": "Pia Lindqvist",
+      "email": "pia@kettle-and-crumb.test",
+      "role": "Contributor"
+    }
+  ],
+  "items": [
+    {
+      "type": "page",
+      "slug": "home",
+      "title": "Home",
+      "seoTitle": "Kettle & Crumb Wholesale — bread delivered to your kitchen",
+      "seoDescription": "Sourdough, rye and croissants baked before dawn and delivered to cafés, restaurants and shops around the harbour.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Wholesale bakery · Quay Street",
+          "headline": "Our bread, at your door before breakfast",
+          "body": "Sourdough, seeded rye and butter croissants, baked from 4am and delivered to cafés, restaurants and shops across the harbour district.",
+          "primaryAction": {
+            "label": "How ordering works",
+            "href": "/ordering"
+          },
+          "secondaryAction": {
+            "label": "Talk to us",
+            "href": "/contact"
+          },
+          "image": {
+            "src": "picture:shop.jpg",
+            "alt": "Shelves of fresh loaves at the bakery counter"
+          },
+          "facts": [
+            {
+              "label": "Deliveries a week",
+              "value": "6"
+            },
+            {
+              "label": "Order by",
+              "value": "6pm"
+            },
+            {
+              "label": "Kitchens we supply",
+              "value": "30+"
+            }
+          ]
+        },
+        {
+          "type": "featureGrid",
+          "heading": "What we deliver",
+          "intro": "The same loaves as the café, packed and on the road before the first customer arrives.",
+          "items": [
+            {
+              "label": "Daily",
+              "title": "Country sourdough",
+              "body": "A crackling crust and a mild, creamy crumb. Sliced or whole."
+            },
+            {
+              "label": "Daily",
+              "title": "Seeded rye",
+              "body": "Dense, dark and keeps for a week. Good for the lunch menu."
+            },
+            {
+              "label": "Daily",
+              "title": "Butter croissants",
+              "body": "Laminated over three days, delivered ready to bake or already baked."
+            },
+            {
+              "label": "Weekends",
+              "title": "Cardamom buns",
+              "body": "Knotted by hand on Saturday mornings. Order by Thursday."
+            }
+          ]
+        },
+        {
+          "type": "cta",
+          "heading": "Ready to order?",
+          "body": "Tell us what your kitchen needs and we will set up a standing order.",
+          "action": {
+            "label": "Email the wholesale desk",
+            "href": "mailto:wholesale@kettleandcrumb.example"
+          }
+        }
+      ]
+    },
+    {
+      "type": "page",
+      "slug": "ordering",
+      "title": "How ordering works",
+      "seoDescription": "Standing orders, extras, deadlines and delivery times for Kettle & Crumb wholesale customers.",
+      "blocks": [
+        {
+          "type": "richText",
+          "heading": "A standing order, and extras when you need them",
+          "html": "<p>Most kitchens start with a standing order: the same loaves on the same mornings, week after week. Need more for a busy weekend? Send us a message by <strong>6pm the day before</strong> and we will add it.</p><ul><li><strong>Delivery:</strong> Tuesday to Saturday, before 7am</li><li><strong>Minimum:</strong> six loaves per delivery</li><li><strong>Invoices:</strong> monthly, by email</li></ul>"
+        },
+        {
+          "type": "imageText",
+          "heading": "From our oven to your counter",
+          "body": "Everything is baked the same morning it is delivered. If a loaf is not right, tell us and we will replace it the next day, no questions asked.",
+          "image": {
+            "src": "picture:sourdough.jpg",
+            "alt": "A sourdough loaf cut open to show its crumb"
+          },
+          "imagePosition": "left"
+        }
+      ]
+    },
+    {
+      "type": "page",
+      "slug": "contact",
+      "title": "Contact",
+      "seoDescription": "Reach the Kettle & Crumb wholesale desk by email or phone.",
+      "blocks": [
+        {
+          "type": "richText",
+          "heading": "The wholesale desk",
+          "html": "<p>Orders and questions: <a href=\"mailto:wholesale@kettleandcrumb.example\">wholesale@kettleandcrumb.example</a> or <a href=\"tel:+441234567891\">01234 567891</a>, Tuesday to Saturday from 6am.</p><p>Retail customers: the café on Quay Street is open to everyone, see the main site.</p>"
+        }
+      ]
+    },
+    {
+      "type": "post",
+      "slug": "new-delivery-routes-for-autumn",
+      "title": "New delivery routes for autumn",
+      "author": "wilma@kettle-and-crumb.test",
+      "seoDescription": "Two new morning routes mean earlier bread for the north side of the harbour.",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Wholesale news",
+          "headline": "New delivery routes for autumn",
+          "image": {
+            "src": "picture:croissants.jpg",
+            "alt": "Croissants cooling on a rack"
+          }
+        },
+        {
+          "type": "richText",
+          "html": "<p>From next week two new routes cover the north side of the harbour, so bread reaches you before 6:30 instead of after seven. If your kitchen is on Mill Lane, Harbour Road or Pier Street, ask the wholesale desk to move you to an earlier slot.</p>"
+        }
+      ]
+    }
+  ]
+}

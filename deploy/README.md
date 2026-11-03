@@ -116,7 +116,8 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 8. The demo clients
 
-Makes Kettle & Crumb and Studio Halden, with their pictures, owned by one account (see `demo/`):
+Makes the two demo companies, Kettle & Crumb Ltd and Studio Halden AS, each with two websites and their pictures, all
+owned by one account (see `demo/`):
 
 ```bash
 cd /srv/nodepress/api
@@ -125,16 +126,24 @@ SEED_ADMIN_PASSWORD='<12 or more characters>' npm run demo -- \
 ```
 
 With an account that already exists, its password is kept and `SEED_ADMIN_PASSWORD` can be left out.
-Running it again refuses to make a client twice; `--replace` deletes and remakes them.
+Running it again refuses to make a client twice; `--replace` deletes and remakes the websites, keeps each company's
+organization, and removes the account's empty organizations that carry a demo company's name.
 
-The first run also adds four people to each site and prints those eight people's passwords once, in its output. Keep
-them: they are shown nowhere else, and a later run keeps each person's password without showing it.
+⚠️ **Once, on a server that ran an earlier version of the demo:** each of its runs made a new organization, so the
+account has empty leftovers named Kettle & Crumb Ltd and Studio Halden AS. Run it with `--replace` this one time: the
+websites are made again inside one organization per company, and the empty leftovers are removed. (On a database
+that has never had the demo, the plain command above is enough.)
+
+The first run also adds four people to each of the four websites and prints the new people's passwords once, in its
+output (twelve people, some on both websites of their company). Keep them: they are shown nowhere else, and a later run
+keeps each person's password without showing it.
 
 ## 9. Check
 
 - `https://kettle-and-crumb.nodepress.brainxdemo.com/` and `https://studio-halden.nodepress.brainxdemo.com/`
-  show the two sites with their photos and logos.
-- `https://admin.nodepress.brainxdemo.com/`: sign in as the demo account; the Site switcher lists both.
+  show the two main sites with their photos and logos; `https://kettle-and-crumb-wholesale.nodepress.brainxdemo.com/`
+  and `https://studio-halden-journal.nodepress.brainxdemo.com/` are their second websites.
+- `https://admin.nodepress.brainxdemo.com/`: sign in as the demo account; its Site switcher lists all four websites.
 - In the admin, change a published page and save: the site shows the change on the next visit.
 - Upload a picture under Media: it loads from `https://api.nodepress.brainxdemo.com/uploads/…`.
 
