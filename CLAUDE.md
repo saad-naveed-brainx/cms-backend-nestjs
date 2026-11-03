@@ -86,9 +86,13 @@ reach it over REST.
   `SiteRemovalService.removeEmptyOrganization`: one with a website, or someone else's, never). It is its own process, so a
   running API's address memory may answer an old site for up to a minute after `--replace`.
 - **Creating a site from the admin** is `POST /sites` (`name`, `hostnames`, and `organizationId` only when the person
-  owns several organisations) and `GET /organizations` (the ones they own). Both need a sign-in and no `X-Site-Id`; only
-  an organisation's owner may add a site to it (checked inside the transaction), and `createSite` shares its rows with
-  `createTenant`, so a site made here and one made by the seed command are the same. It calls `invalidateSite` (below).
+  owns several organisations), and the organisation routes are in `src/organizations/`: `GET /organizations` (the ones
+  they own) and `POST /organizations` (`{ name }`, 201 `{ id, name }`, organizations T2, `../docs/DECISIONS.md` D-056).
+  All need a sign-in and no `X-Site-Id`; only an organisation's owner may add a site to it (checked inside the
+  transaction), and `createSite` shares its rows with `createTenant`, so a site made here and one made by the seed
+  command are the same. It calls `invalidateSite` (below). **Anyone signed in may create an organisation** (no limit, no
+  unique name; trimmed, 1 to 100 characters, kept as typed, a NUL character is a 400; the body is strict, so an
+  `ownerId` is refused: the caller always owns it). The provisioning desk's three methods are pinned by UC-TS-13.
 - **Deleting a site** is `DELETE /sites/:id` (`src/site-removal/`, `../docs/DECISIONS.md` D-039): signed in, no `X-Site-Id`; only the
   owner of the site's organisation (a member who is not is a 403, anyone else a 404). `SiteRemovalRepository` is the third
   unscoped desk and the only one that deletes a site: one transaction, the owner checked inside it, the site's row
