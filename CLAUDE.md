@@ -22,8 +22,8 @@ reach it over REST.
    this comes from: the `X-Site-Id` header, checked against membership on every request (decision D-018),
    and lower-cased by `SiteAccessGuard`, so an upper-case id is the same site and `site.siteId` is always the
    stored form (users-roles D11, B-24 (1)).
-7. The two invariant tests (cross-tenant read denial, recursive path recomputation) must stay green.
-   A red invariant test stops other work.
+7. The invariant tests (cross-tenant read denial, `test/tenant-isolation.e2e-spec.ts`, recursive path recomputation) must
+   stay green. A red invariant test stops other work.
 
 ## Gotchas
 
@@ -174,6 +174,16 @@ reach it over REST.
   "unknown" addresses, so a newly added address works at once (no `invalidateHost` call needed). Hook
   shipped first, callers come later (`../docs/features/host-resolution/PLAN.md` D6,
   `../docs/DECISIONS.md` D-017).
+- **Every route is in the isolation table** (`test/tenant-isolation.e2e-spec.ts`, `ROUTES`, `../docs/DECISIONS.md` D-052). The test
+  asks the running app for all its routes and fails, naming the route, for one that is missing from the table, gone from it, or
+  marked differently from its decorators (`@Public`, `@SiteScoped`, `@RequirePermission`). **A new route is added there on
+  purpose**, with a valid request the sweeps can aim at another client: `ids: true` if the request names an id (in the address
+  or the body), `disposable: true` if running it for real changes or deletes what it is given, `creates` for a create. Two
+  clients, Acorn and Birch, then attack each other through every closed route (the other's site header, in capitals, doubled or
+  malformed; the other's ids under one's own header; a site id smuggled into the body, the form or the address), and the victim
+  is fingerprinted before and after in every table that has a `site_id` column (found from the database, so a new tenant table
+  is included without anyone remembering). The marking of `ids` and `disposable` is by hand, which is the one thing the test
+  cannot check for you.
 - **Every route needs a token unless it is marked `@Public()`** (global guard, `src/auth/`). A site-scoped route
   (`@SiteScoped()`, `@RequirePermission(...)`) also needs the `X-Site-Id` header. Permissions are looked up per
   request, not read from the token. `JWT_SECRET` must be set (32+ characters in production); the test configs set
