@@ -192,6 +192,12 @@ reach it over REST.
   is fingerprinted before and after in every table that has a `site_id` column (found from the database, so a new tenant table
   is included without anyone remembering). The marking of `ids` and `disposable` is by hand, which is the one thing the test
   cannot check for you.
+  The routes that came with organizations (`POST /organizations`, whose row's owner column is `owner_id`, and `GET /organizations/:id/team`)
+  are in the table too (organizations T5). `test/organization-isolation.e2e-spec.ts` proves what the sweeps cannot: that a person on one
+  website of an organization has nothing on its other websites, whatever their role (UC-OR-09), that one organization's owner learns
+  nothing of another's and changes nothing of it through the organization routes (UC-OR-10), and that a person on two organizations is
+  on each team with that organization's website and role only (UC-OR-11). A sweep that creates organizations gives its owner several,
+  and then `POST /sites` must name the organization (a 400 otherwise), which the suite's `disposable()` does.
 - **Every route needs a token unless it is marked `@Public()`** (global guard, `src/auth/`). A site-scoped route
   (`@SiteScoped()`, `@RequirePermission(...)`) also needs the `X-Site-Id` header. Permissions are looked up per
   request, not read from the token. `JWT_SECRET` must be set (32+ characters in production); the test configs set

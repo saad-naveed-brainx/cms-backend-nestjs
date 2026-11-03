@@ -79,7 +79,7 @@ type Probe = {
   /** A create: the table its row lands in, whose column says whose it is, and where its id is in the answer. */
   creates?: {
     table: string;
-    owner: 'site_id' | 'organization_id';
+    owner: 'site_id' | 'organization_id' | 'owner_id';
     idOf: (body: any) => string;
   };
 };
@@ -254,6 +254,25 @@ const ROUTES: Probe[] = [
     call: () => get('/organizations'),
   },
   {
+    // Whoever is signed in may make one and owns it (organizations T2, D-056).
+    key: 'POST /organizations',
+    kind: 'person',
+    call: () => post('/organizations', { name: `Organization ${uniq()}` }),
+    creates: {
+      table: 'organizations',
+      owner: 'owner_id',
+      idOf: (b) => b.id,
+    },
+  },
+  {
+    // Only the organization's owner reads its team (organizations T3, D-054); anyone else is told
+    // what is told of an organization that is not there.
+    key: 'GET /organizations/:id/team',
+    kind: 'person',
+    ids: true,
+    call: (t) => get(`/organizations/${t.organizationId}/team`),
+  },
+  {
     key: 'POST /sites',
     kind: 'person',
     ids: true,
@@ -395,7 +414,13 @@ async function disposable(side: Side): Promise<Target> {
     .api()
     .post('/sites')
     .set({ Authorization: h.Authorization })
-    .send({ name: `Spare ${uniq()}`, hostnames: [`${uniq()}.test`] })
+    // The organization is named: once a sweep has made the owner another one (`POST /organizations`),
+    // a site made without it is a 400, because the owner then owns several.
+    .send({
+      name: `Spare ${uniq()}`,
+      hostnames: [`${uniq()}.test`],
+      organizationId: side.organizationId,
+    })
     .expect(201);
   return {
     siteId: spare.body.site.id,
@@ -475,7 +500,7 @@ describe('every door is known', () => {
       }
     }
 
-    // Reading nothing would make every comparison below trivially fine. The table has 32 routes today:
+    // Reading nothing would make every comparison below trivially fine. The table has 34 routes today:
     // 25 is the floor that keeps a scan that silently finds (almost) nothing from passing.
     expect(found.size).toBeGreaterThan(25);
 
@@ -640,7 +665,11 @@ async function smuggleWrites(attacker: Side, victim: Side): Promise<string[]> {
           [idOf(res.body)],
         );
         const expected =
-          owner === 'site_id' ? attacker.siteId : attacker.organizationId;
+          owner === 'site_id'
+            ? attacker.siteId
+            : owner === 'owner_id'
+              ? attacker.owner.userId
+              : attacker.organizationId;
         if (rows.length !== 1 || rows[0].owner !== expected) {
           problems.push(
             `${label}: what was made is not the attacker's own (${JSON.stringify(rows)})`,
@@ -1001,7 +1030,12 @@ describe('public doors and links', () => {
       .post('/invitations/lookup')
       .send({ token: w.A.invitationToken })
       .expect(200);
-    expect(found.body.site).toEqual({ name: 'Acorn Bakery' });
+    // It names the site and its organization, by id too (organizations T1), and nothing of B.
+    expect(found.body.site).toEqual({ id: w.A.siteId, name: 'Acorn Bakery' });
+    expect(found.body.organization).toEqual({
+      id: w.A.organizationId,
+      name: 'Acorn Bakery Ltd',
+    });
     expect(JSON.stringify(found.body)).not.toMatch(/birch/i);
     const joined = await w
       .api()
