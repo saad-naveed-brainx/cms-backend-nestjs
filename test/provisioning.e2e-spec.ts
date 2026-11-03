@@ -65,6 +65,7 @@ type Membership = {
   site: {
     id: string;
     name: string;
+    organizationId: string;
     primaryHost: string | null;
     theme: Record<string, unknown>;
   };
@@ -218,6 +219,7 @@ describe('creating a tenant', () => {
     expect(membership.site).toEqual({
       id: result.site.id,
       name: 'Orchard Bakery',
+      organizationId: result.organization.id,
       primaryHost: 'orchard.test',
       theme: {},
     });

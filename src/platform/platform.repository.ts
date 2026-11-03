@@ -20,10 +20,14 @@ export type UserMembership = {
   site: {
     id: string;
     name: string;
+    /** The organisation the site belongs to (organizations T1). */
+    organizationId: string;
     primaryHost: string | null;
     theme: Record<string, unknown>;
   };
   role: { id: string; name: string; permissions: Permission[] };
+  /** The site's organisation, for listing the organisations a person belongs to (organizations T1). */
+  organization: { id: string; name: string };
   /** Whether the user owns the organisation the site belongs to: who may delete it (D-039). */
   ownsOrganization: boolean;
 };
@@ -125,6 +129,8 @@ export class PlatformRepository {
       )
       .select('site.id', 'siteId')
       .addSelect('site.name', 'siteName')
+      .addSelect('site.organizationId', 'organizationId')
+      .addSelect('organization.name', 'organizationName')
       .addSelect('hostname.hostname', 'primaryHost')
       .addSelect('site.theme', 'theme')
       .addSelect('role.id', 'roleId')
@@ -160,6 +166,8 @@ export class PlatformRepository {
 type MembershipRow = {
   siteId: string;
   siteName: string;
+  organizationId: string;
+  organizationName: string;
   primaryHost: string | null;
   theme: Record<string, unknown> | null;
   roleId: string;
@@ -173,6 +181,7 @@ function toMembership(row: MembershipRow): UserMembership {
     site: {
       id: row.siteId,
       name: row.siteName,
+      organizationId: row.organizationId,
       primaryHost: row.primaryHost ?? null,
       theme: row.theme ?? {},
     },
@@ -181,6 +190,7 @@ function toMembership(row: MembershipRow): UserMembership {
       name: row.roleName,
       permissions: row.permissions,
     },
+    organization: { id: row.organizationId, name: row.organizationName },
     ownsOrganization: row.ownsOrganization,
   };
 }

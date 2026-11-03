@@ -71,6 +71,7 @@ describe('POST /auth/login', () => {
       'accessToken',
       'expiresAt',
       'memberships',
+      'organizations',
       'tokenType',
       'user',
     ]);
@@ -85,6 +86,7 @@ describe('POST /auth/login', () => {
         site: {
           id: corrick.site.id,
           name: 'Corrick',
+          organizationId: corrick.site.organizationId,
           primaryHost: 'corrick.test',
           theme: {},
         },
@@ -131,6 +133,7 @@ describe('POST /auth/login', () => {
         site: {
           id: corrick.site.id,
           name: 'Corrick',
+          organizationId: corrick.site.organizationId,
           primaryHost: 'corrick.test',
           theme: {},
         },
@@ -204,6 +207,7 @@ describe('POST /auth/login', () => {
         site: {
           id: bakery.site.id,
           name: 'Bakery',
+          organizationId: bakery.site.organizationId,
           primaryHost: null,
           theme: {},
         },
@@ -215,6 +219,7 @@ describe('POST /auth/login', () => {
         site: {
           id: corrick.site.id,
           name: 'Corrick',
+          organizationId: corrick.site.organizationId,
           primaryHost: 'corrick.test',
           theme: {},
         },

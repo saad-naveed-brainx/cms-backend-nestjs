@@ -104,7 +104,8 @@ describe('a new person', () => {
 
     const found = await lookup(sara.token).expect(200);
     expect(found.body).toEqual({
-      site: { name: 'Kettle & Crumb' },
+      site: { id: olivia.siteId, name: 'Kettle & Crumb' },
+      organization: { id: expect.any(String), name: 'Kettle & Crumb Ltd' },
       role: { name: 'Contributor' },
       email: 'sara@kettle.test',
       hasAccount: false,

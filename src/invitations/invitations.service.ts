@@ -33,7 +33,9 @@ export type IssuedInvitation = { invitation: InvitationView; token: string };
 
 /** What the invite page shows before the person accepts. */
 export type InvitationLookup = {
-  site: { name: string };
+  site: { id: string; name: string };
+  /** The site's organisation (organizations T1), so a page can name it and land on the site by id. */
+  organization: { id: string; name: string };
   role: { name: string };
   email: string;
   hasAccount: boolean;
@@ -126,7 +128,8 @@ export class InvitationsService {
   async lookup(token: string): Promise<InvitationLookup> {
     const found = await this.findValid(token);
     return {
-      site: { name: found.siteName },
+      site: { id: found.siteId, name: found.siteName },
+      organization: { id: found.organizationId, name: found.organizationName },
       role: { name: found.roleName },
       email: found.email,
       hasAccount: found.hasAccount,

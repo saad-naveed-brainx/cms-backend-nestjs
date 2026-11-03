@@ -51,8 +51,11 @@ reach it over REST.
   (host → site, email or id → user, user → their memberships, which also reads `site_members`, `roles` and each site's primary
   hostname and theme, which sign-in returns as `site.primaryHost` and `site.theme` (stored as is, `{}` for a new site) so the
   admin can link to the site and draw its live preview, and `ownsOrganization` (the user owns the site's organisation, so
-  may delete it, D-039), and
-  user → the organisations they own). The other unscoped desks are `ProvisioningRepository`, `SiteRemovalRepository`
+  may delete it, D-039), and the site's organisation (`site.organizationId`), and
+  user → the organisations they own). Sign-in, `/auth/me` and the invite accept answer also carry `organizations`
+  (`{ id, name, ownsOrganization }`, by name): `AuthService` builds them from the memberships plus the organisations the person
+  owns, so one with no website yet is there too (organizations T1, `../docs/DECISIONS.md` D-054); the platform desk has no
+  method for it. The other unscoped desks are `ProvisioningRepository`, `SiteRemovalRepository`
   and `InvitationAcceptanceRepository` (below). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).
@@ -93,7 +96,8 @@ reach it over REST.
   expiry); a member's email is a 409; a role not on the site a 400 (`roleId: …`). The link's secret (`token`, 32 random
   bytes as base64url) is answered once by create and renew and **never stored**: the table keeps `token_hash`, its SHA-256
   hex, so a database read hands out no working link; renew replaces it, so the old link stops working. `expires_at` is 7
-  days on. Public: `POST /invitations/lookup` (`{ token }`) and `POST /invitations/accept` (`{ token, password, name? }`),
+  days on. Public: `POST /invitations/lookup` (`{ token }`, answering `site: { id, name }`, `organization: { id, name }`,
+  `role: { name }`, `email`, `hasAccount`, `expiresAt`) and `POST /invitations/accept` (`{ token, password, name? }`),
   which answers the login answer (`AuthService.signIn`). The email is always the invitation's and the site its row's.
   Whether the person has an account is decided at accept time: existing, the password goes through
   `AuthService.checkPassword` (sign-in's one check, which the sign-in limit wraps; a wrong one is a 401, or a 409 "This
