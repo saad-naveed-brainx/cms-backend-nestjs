@@ -234,8 +234,25 @@ reach it over REST.
   the site or is in the trash is "Page not found" on the list, and on the one-version route a missing page and a missing version (unknown,
   malformed or another page's id) are told alike, "Version not found". `RevisionRepository` extends `ScopedRepository` and **only reads**: the
   saver's name is joined from this site's `users` (never the email; `null` once the account is gone), and a snapshot that lacks one of the seven
-  fields answers its empty value. Nothing writes the table yet (the pages desk will, in the same step as a save, T2), and there is no route that
-  changes or deletes a version.
+  fields answers its empty value. There is no route that changes or deletes a version.
+- **Every save keeps its version** (`ContentRepository.create` / `save` / `update`, version-history T2, `../docs/DECISIONS.md` D-057 to D-060): the
+  **pages desk** writes the page and its version **in one transaction**, so there is never a save without its version or a version of something that
+  was not saved, and nothing that writes a page can skip it (every write goes through this desk). The version is exactly the seven things Save
+  accepts (`title`, `blocks`, `data`, `seoTitle`, `seoDescription`, `canonicalUrl`, `noIndex`): a change to any of them writes one, a change to
+  anything else (publish, unpublish) does not. `save(siteId, id, patch)` returns `{ page, changed }`: it **locks the page row first** (`FOR UPDATE`),
+  so two saves of one page queue up and the second starts from what the first left; values equal to the stored ones are not changes (compared as
+  JSON, so key order does not matter, and `updatedBy` alone is not one), and a save that changes nothing **writes nothing**, not even "last changed"
+  or "updated by", and `ContentService.update` then does not tell the website. A page that has **no version yet** (every new website's Home page,
+  which provisioning writes without a save, and every page from before this feature) keeps the version it had at its first real save: its
+  current content, dated when it was last changed and credited to whoever changed it. No migration. "Last changed" is set to `clock_timestamp()`
+  (the moment of the write; `now()` would be the start of the transaction, which can be earlier than a save that went first), and a new version is
+  always dated after the page's newest, so the list's newest-first order is the order of the saves. Creating a page writes its first version in
+  the creating transaction (dated when it was made, credited to its creator); a failed create (taken address) leaves neither. Restore is not
+  here: the admin loads an old version into the editor as unsaved changes and Save writes a new version (D-058). Nothing is ever deleted
+  automatically (B-47). A desk that must write in a transaction of its own (this is the first) cannot call the base `create` / `update`, so it
+  takes their input checks from the base's `newRow` and `changesFor` (the site id, the system's dates, the id, and the fields without `id`,
+  `siteId` and `undefined`), which `create` and `update` use themselves: one copy of the checks. Test with
+  `test/content-versions-write.e2e-spec.ts`; the six-saves-at-once case fails without the row lock.
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
 - **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in
   `vitest.config.e2e.ts`. `test/support/` has `createTestApp`, `resetDatabase` (refuses non-`_test`

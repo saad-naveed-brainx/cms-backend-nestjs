@@ -140,11 +140,7 @@ export abstract class ScopedRepository<
 
   /** Saves a new row on the site. Its id is a fresh v7 from the entity's `@BeforeInsert`. */
   async create(siteId: string, data: NewRow<E, Defaulted>): Promise<E> {
-    requireSiteId(siteId);
-    const row = this.repository.create({
-      ...writableFields(data),
-      siteId,
-    } as DeepPartial<E>);
+    const row = this.repository.create(this.newRow(siteId, data));
     return this.repository.save(row);
   }
 
@@ -157,10 +153,8 @@ export abstract class ScopedRepository<
    * one is refused whole), then the id.
    */
   async update(siteId: string, id: string, patch: Patch<E>): Promise<E | null> {
-    requireSiteId(siteId);
-    this.refuseSystemFields(patch);
-    if (!isUuid(id)) return null;
-    const changes = writableFields(patch);
+    const changes = this.changesFor(siteId, id, patch);
+    if (changes === null) return null;
     if (Object.keys(changes).length === 0) return this.findById(siteId, id);
 
     // The site and trash conditions sit in the UPDATE itself: no gap between check and write.
@@ -169,6 +163,32 @@ export abstract class ScopedRepository<
       changes as UpdateValues<E>,
     );
     return affected ? this.findById(siteId, id) : null;
+  }
+
+  /**
+   * For a desk that must write in a transaction of its own (the pages desk, which writes a page and
+   * its version together, version-history D-059) and so cannot call `create`: the same checks and
+   * the same fields to write as `create` makes, kept in this one place. `siteId` goes last, so one
+   * carried in `data` cannot move the row.
+   */
+  protected newRow(siteId: string, data: NewRow<E, Defaulted>): DeepPartial<E> {
+    requireSiteId(siteId);
+    return { ...writableFields(data), siteId } as DeepPartial<E>;
+  }
+
+  /**
+   * The same for `update`: the fields to write (which can be none), after the checks, made in this
+   * order: the site id, then the system's dates (a patch setting one is refused whole), then the id.
+   * `null` when the id is not a uuid, so nothing can match it.
+   */
+  protected changesFor(
+    siteId: string,
+    id: string,
+    patch: Patch<E>,
+  ): Record<string, unknown> | null {
+    requireSiteId(siteId);
+    this.refuseSystemFields(patch);
+    return isUuid(id) ? writableFields(patch) : null;
   }
 
   /** For a desk's own lookups (by path, by slug): the site's row matching `where`, or `null`. */

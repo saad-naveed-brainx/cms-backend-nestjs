@@ -351,6 +351,68 @@ describe('npm run demo', () => {
     );
   });
 
+  it('[UC-VH-23] every demo page has a first version made through the services, and each website’s Home page has two: the one it was made with and the demo’s', async () => {
+    // Read from what UC-DM-01's run made.
+    const pages = await dataSource.query<
+      { site: string; path: string; versions: number }[]
+    >(
+      `SELECT s.name AS site, c.path, count(r.id)::int AS versions
+         FROM content c
+         JOIN sites s ON s.id = c.site_id
+         LEFT JOIN revisions r ON r.site_id = c.site_id AND r.content_id = c.id
+        GROUP BY s.name, c.path
+        ORDER BY s.name, c.path`,
+    );
+    // 26 pages and items in all (UC-DM-01): the Home page of each of the four websites, written by
+    // the provisioning step without a save, then changed once by the demo; everything else made by
+    // the page service, which keeps a first version with the page.
+    expect(pages).toHaveLength(26);
+    expect(pages.filter((page) => page.path === '/home')).toHaveLength(4);
+    for (const page of pages) {
+      expect([page.site, page.path, page.versions]).toEqual([
+        page.site,
+        page.path,
+        page.path === '/home' ? 2 : 1,
+      ]);
+    }
+
+    // And through the route, as the owner: the bakery's Home page, newest first.
+    const login = await api()
+      .post('/auth/login')
+      .send({ email: 'owner@demo.test', password: PASSWORD })
+      .expect(200);
+    const bakery = login.body.memberships.find(
+      (m: { site: { name: string } }) => m.site.name === 'Kettle & Crumb',
+    ).site.id as string;
+    const headers = {
+      Authorization: `Bearer ${login.body.accessToken}`,
+      'X-Site-Id': bakery,
+    };
+    const home = await api()
+      .get('/content?path=/home')
+      .set(headers)
+      .expect(200);
+    const versions = await api()
+      .get(`/content/${home.body.items[0].id}/versions`)
+      .set(headers)
+      .expect(200);
+    expect(versions.body.total).toBe(2);
+    const [newest, oldest] = await Promise.all(
+      (versions.body.items as { id: string }[]).map(
+        async (item) =>
+          (
+            await api()
+              .get(`/content/${home.body.items[0].id}/versions/${item.id}`)
+              .set(headers)
+              .expect(200)
+          ).body,
+      ),
+    );
+    expect(newest.blocks[0].headline).toBe('Bread worth getting up early for');
+    expect(oldest.blocks[0].headline).not.toBe(newest.blocks[0].headline);
+    expect(newest.savedBy.name).toBe('Demo Owner');
+  });
+
   it('[UC-DM-02] run again, it refuses to make a client twice; with --replace it deletes and remakes them, pictures and all', async () => {
     const again = await demo([
       '--email',

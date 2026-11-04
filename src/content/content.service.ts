@@ -315,7 +315,10 @@ export class ContentService {
     return toVersion(found.row, found.savers);
   }
 
-  /** A draft of the given type, owned by the person who made it. A taken address is a 409. */
+  /**
+   * A draft of the given type, owned by the person who made it, with its first version (written
+   * with it by the pages desk). A taken address is a 409.
+   */
   async create(
     access: SiteAccess,
     user: AuthUser,
@@ -358,7 +361,8 @@ export class ContentService {
   /**
    * `content.edit_any` edits any page of the site; `content.edit_own` only pages the person
    * created; neither is a 403. A page of another site, or in the trash, is a 404 like any page
-   * that is not there.
+   * that is not there. A save that changes something keeps its version (D-057); one that changes
+   * nothing writes nothing and does not tell the website.
    */
   async update(
     access: SiteAccess,
@@ -370,18 +374,19 @@ export class ContentService {
     if (!page) throw new NotFoundException('Page not found');
     requireEditRight(access, user, page);
 
-    const updated = await this.pages.update(access.siteId, id, {
+    const saved = await this.pages.save(access.siteId, id, {
       ...body,
       ...(body.blocks ? { blocks: cleanBlocks(body.blocks) } : {}),
       updatedBy: user.id,
     });
     // Gone between the read and the write (trashed by someone else just now).
-    if (!updated) throw new NotFoundException('Page not found');
-    // A live page changed: the website must stop showing what it remembers (CNT-08). A draft is not public.
-    if (updated.status === ContentStatus.Published) {
+    if (!saved) throw new NotFoundException('Page not found');
+    // A live page changed: the website must stop showing what it remembers (CNT-08). A draft is not
+    // public, and a save that changed nothing changed nothing there (version-history D3).
+    if (saved.changed && saved.page.status === ContentStatus.Published) {
       await this.website.forgetSite(access.siteId);
     }
-    return toPage(updated, await this.typesById(access.siteId));
+    return toPage(saved.page, await this.typesById(access.siteId));
   }
 
   /**
