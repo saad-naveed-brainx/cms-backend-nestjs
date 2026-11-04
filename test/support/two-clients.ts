@@ -6,7 +6,12 @@ import { createTestApp } from './app.js';
 import { resetDatabase } from './database.js';
 import { invite, newClient, roleIdOf, type Client } from './invitations.js';
 import { addMember } from './members.js';
-import { TEST_PASSWORD, seedMembership, seedUser } from './seed.js';
+import {
+  TEST_PASSWORD,
+  seedMembership,
+  seedUser,
+  seedVersion,
+} from './seed.js';
 
 /**
  * Two clients, Acorn (A) and Birch (B), for the tenant isolation tests, made through the real
@@ -29,8 +34,9 @@ export type Side = {
   owner: Client;
   organizationId: string;
   siteId: string;
-  /** A published page at `/about`. */
+  /** A published page at `/about`, and a version of it (its title carries the side's tag). */
   aboutId: string;
+  versionId: string;
   /** A draft page at `/draft`. */
   draftId: string;
   /** The content type "Recipe" at `/recipes`, and an item of it at `/recipes/soup`. */
@@ -140,6 +146,22 @@ export async function buildWorld(): Promise<World> {
       200,
       'publish about',
     );
+    // A version of the page, written straight, so the isolation sweeps have one to reach for (a
+    // save writes its own from version-history T2 on; this one carries the tag a leak would show).
+    const version = await seedVersion(dataSource, {
+      siteId: owner.siteId,
+      contentId: about.id,
+      createdBy: owner.userId,
+      snapshot: {
+        title: `${Tag} About`,
+        blocks: [{ type: 'hero', headline: `${Tag} headline` }],
+        data: {},
+        seoTitle: null,
+        seoDescription: null,
+        canonicalUrl: null,
+        noIndex: false,
+      },
+    });
     const draft = await must(
       api()
         .post('/content')
@@ -217,6 +239,7 @@ export async function buildWorld(): Promise<World> {
       organizationId: orgs.items[0].id,
       siteId: owner.siteId,
       aboutId: about.id,
+      versionId: version.id,
       draftId: draft.id,
       typeId: type.id,
       soupId: soup.id,

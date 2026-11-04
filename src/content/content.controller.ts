@@ -22,6 +22,7 @@ import {
   listQuery,
   parseOr400,
   updatePageBody,
+  versionsQuery,
 } from './content-input.js';
 import { ContentService } from './content.service.js';
 
@@ -72,6 +73,39 @@ export class ContentController {
       id,
       parseOr400(updatePageBody, body),
     );
+  }
+
+  /**
+   * A page's versions, newest first, in slices (version-history T1). Reading only: a version is
+   * written by the save it belongs to. Whoever may edit the page may read them; the service decides,
+   * as for a save.
+   */
+  @Get(':id/versions')
+  @SiteScoped()
+  versions(
+    @CurrentSite() site: SiteAccess,
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query() query: unknown,
+  ) {
+    return this.content.listVersions(
+      site,
+      user,
+      id,
+      parseOr400(versionsQuery, query),
+    );
+  }
+
+  /** One version of the page in full: what Save accepts, as it was at that save. */
+  @Get(':id/versions/:versionId')
+  @SiteScoped()
+  version(
+    @CurrentSite() site: SiteAccess,
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('versionId') versionId: string,
+  ) {
+    return this.content.getVersion(site, user, id, versionId);
   }
 
   /**

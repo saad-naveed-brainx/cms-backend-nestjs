@@ -5,6 +5,7 @@ import {
   ContentType,
   Hostname,
   Organization,
+  Revision,
   Role,
   Site,
   SiteMember,
@@ -95,6 +96,34 @@ export async function seedTrashedPage(
   fields: PageSeed,
 ): Promise<Content> {
   return seedPage(dataSource, { deletedAt: new Date(), ...fields });
+}
+
+/**
+ * A version of a page written straight to the table, past the desks, so a test of reading versions
+ * does not depend on the pages desk's own writes (version-history T1; T2 makes the desk write them).
+ * `createdAt` can be given, to put versions at known times.
+ */
+export async function seedVersion(
+  dataSource: DataSource,
+  fields: Pick<Revision, 'siteId' | 'contentId'> &
+    Partial<Pick<Revision, 'snapshot' | 'createdBy' | 'createdAt'>>,
+): Promise<Revision> {
+  const m = dataSource.manager;
+  return m.save(
+    m.create(Revision, {
+      snapshot: {
+        title: 'A title',
+        blocks: [],
+        data: {},
+        seoTitle: null,
+        seoDescription: null,
+        canonicalUrl: null,
+        noIndex: false,
+      },
+      createdBy: null,
+      ...fields,
+    }),
+  );
 }
 
 /**

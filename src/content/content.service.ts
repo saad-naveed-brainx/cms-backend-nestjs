@@ -9,7 +9,11 @@ import type { AuthUser, SiteAccess } from '../auth/decorators.js';
 import { Permission } from '../auth/permission.js';
 import { ContentTypeRepository } from '../content-types/content-type.repository.js';
 import { ContentStatus } from '../database/entities/content.entity.js';
-import type { Content, ContentType } from '../database/entities/index.js';
+import type {
+  Content,
+  ContentType,
+  Revision,
+} from '../database/entities/index.js';
 import { PreviewTokenService } from '../preview/preview-token.service.js';
 import { WebsiteCache } from '../website/website-cache.service.js';
 import { cleanBlocks } from './clean-blocks.js';
@@ -17,8 +21,10 @@ import {
   type CreatePageBody,
   type ListQuery,
   type UpdatePageBody,
+  type VersionsQuery,
 } from './content-input.js';
 import { ContentRepository, PathTakenError } from './content.repository.js';
+import { RevisionRepository, type SaverRef } from './revision.repository.js';
 
 /** A page's type as the screens need it. */
 type TypeRef = { id: string; slug: string; name: string };
@@ -99,6 +105,66 @@ export function toTypeView(type: ContentType) {
   };
 }
 
+/** A version in a list: when it was saved and by whom, no content. */
+export type VersionRow = ReturnType<typeof toVersionRow>;
+
+/** A version in full: what Save accepts, as it was at that save. */
+export type VersionView = ReturnType<typeof toVersion>;
+
+function toVersionRow(row: Revision, savers: Map<string, SaverRef>) {
+  return {
+    id: row.id,
+    savedAt: row.createdAt,
+    // `null` for a version saved by an account that is gone.
+    savedBy:
+      row.createdBy === null ? null : (savers.get(row.createdBy) ?? null),
+  };
+}
+
+const textOrNull = (value: unknown): string | null =>
+  typeof value === 'string' ? value : null;
+
+/**
+ * The seven things Save accepts, read out of the stored snapshot. A snapshot that lacks one (an
+ * older shape) still answers all seven, with their empty values, so the screens never meet a hole.
+ */
+function toVersion(row: Revision, savers: Map<string, SaverRef>) {
+  const snapshot = row.snapshot;
+  const data = snapshot.data;
+  return {
+    ...toVersionRow(row, savers),
+    title: typeof snapshot.title === 'string' ? snapshot.title : '',
+    blocks: Array.isArray(snapshot.blocks)
+      ? (snapshot.blocks as unknown[])
+      : [],
+    data:
+      typeof data === 'object' && data !== null && !Array.isArray(data)
+        ? (data as Record<string, unknown>)
+        : {},
+    seoTitle: textOrNull(snapshot.seoTitle),
+    seoDescription: textOrNull(snapshot.seoDescription),
+    canonicalUrl: textOrNull(snapshot.canonicalUrl),
+    noIndex: snapshot.noIndex === true,
+  };
+}
+
+/**
+ * Editing, and so reading a page's versions: `content.edit_any` on any page of the site,
+ * `content.edit_own` only on a page the person created; neither is a 403. Checked after the page
+ * is found, so a page that is not there (or another site's, or in the trash) stays a 404.
+ */
+function requireEditRight(
+  access: SiteAccess,
+  user: AuthUser,
+  page: Content,
+): void {
+  const mayEdit =
+    access.permissions.includes(Permission.ContentEditAny) ||
+    (access.permissions.includes(Permission.ContentEditOwn) &&
+      page.createdBy === user.id);
+  if (!mayEdit) throw new ForbiddenException();
+}
+
 /**
  * Publishing and unpublishing: `content.publish` on any page of the site, `content.publish_own`
  * only on a page the person created; neither is a 403. Checked after the page is found, so a page
@@ -130,6 +196,7 @@ function addressFor(urlPrefix: string | null, slug: string): string {
 export class ContentService {
   constructor(
     private readonly pages: ContentRepository,
+    private readonly versions: RevisionRepository,
     private readonly types: ContentTypeRepository,
     private readonly previews: PreviewTokenService,
     private readonly website: WebsiteCache,
@@ -193,6 +260,61 @@ export class ContentService {
     return toPage(page, await this.typesById(siteId));
   }
 
+  /**
+   * A page's versions, newest first, in slices (version-history T1, plan D4, D7). Whoever may edit
+   * the page may read them: the rule of a save, checked after the page is found.
+   */
+  async listVersions(
+    access: SiteAccess,
+    user: AuthUser,
+    id: string,
+    query: VersionsQuery,
+  ): Promise<{
+    items: VersionRow[];
+    total: number;
+    limit: number;
+    offset: number;
+  }> {
+    const page = await this.pages.findById(access.siteId, id);
+    if (!page) throw new NotFoundException('Page not found');
+    requireEditRight(access, user, page);
+
+    const { rows, total, savers } = await this.versions.listForPage(
+      access.siteId,
+      page.id,
+      query,
+    );
+    return {
+      items: rows.map((row) => toVersionRow(row, savers)),
+      total,
+      limit: query.limit,
+      offset: query.offset,
+    };
+  }
+
+  /**
+   * One version of a page in full. A page that is not there and a version that is not that page's
+   * are told alike ("Version not found"), so a version id never says which of the two is wrong.
+   */
+  async getVersion(
+    access: SiteAccess,
+    user: AuthUser,
+    id: string,
+    versionId: string,
+  ): Promise<VersionView> {
+    const page = await this.pages.findById(access.siteId, id);
+    if (!page) throw new NotFoundException('Version not found');
+    requireEditRight(access, user, page);
+
+    const found = await this.versions.findOfPage(
+      access.siteId,
+      page.id,
+      versionId,
+    );
+    if (!found) throw new NotFoundException('Version not found');
+    return toVersion(found.row, found.savers);
+  }
+
   /** A draft of the given type, owned by the person who made it. A taken address is a 409. */
   async create(
     access: SiteAccess,
@@ -246,12 +368,7 @@ export class ContentService {
   ): Promise<PageView> {
     const page = await this.pages.findById(access.siteId, id);
     if (!page) throw new NotFoundException('Page not found');
-
-    const mayEdit =
-      access.permissions.includes(Permission.ContentEditAny) ||
-      (access.permissions.includes(Permission.ContentEditOwn) &&
-        page.createdBy === user.id);
-    if (!mayEdit) throw new ForbiddenException();
+    requireEditRight(access, user, page);
 
     const updated = await this.pages.update(access.siteId, id, {
       ...body,

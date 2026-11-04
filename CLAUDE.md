@@ -226,6 +226,16 @@ reach it over REST.
   (`src/content/clean-blocks.ts`, `sanitize-html`, BLK-05, `../docs/DECISIONS.md` D-041): paragraphs, line breaks, bold, italic,
   underline, strike, `h2`/`h3`, lists, quotes and `http(s)`/`mailto`/`tel`/on-site links survive, everything else is taken out
   keeping its words. The website draws stored HTML as it is (invariant 5), so nothing else may write a text block.
+- **A page's versions** (`src/content/revision.repository.ts`, version-history T1, `../docs/DECISIONS.md` D-057): `GET /content/:id/versions?limit=&offset=`
+  (`limit` 1 to 100, default 20; newest first; `{ items: [{ id, savedAt, savedBy: { id, name } | null }], total, limit, offset }`) and
+  `GET /content/:id/versions/:versionId` (`{ id, savedAt, savedBy, title, blocks, data, seoTitle, seoDescription, canonicalUrl, noIndex }`:
+  what Save accepts, as it was at that save). Both are `@SiteScoped()` and for whoever may edit the page: `content.edit_any`, or
+  `content.edit_own` on a page they made (checked in the service after the page is found, as `update` does; else a 403). A page that is not on
+  the site or is in the trash is "Page not found" on the list, and on the one-version route a missing page and a missing version (unknown,
+  malformed or another page's id) are told alike, "Version not found". `RevisionRepository` extends `ScopedRepository` and **only reads**: the
+  saver's name is joined from this site's `users` (never the email; `null` once the account is gone), and a snapshot that lacks one of the seven
+  fields answers its empty value. Nothing writes the table yet (the pages desk will, in the same step as a save, T2), and there is no route that
+  changes or deletes a version.
 - **ESM.** `"type": "module"` with `nodenext`: relative imports end in `.js`.
 - **API tests (`test/*.e2e-spec.ts`) use `cms_test`** (the `DATABASE_URL` name + `_test`), set in
   `vitest.config.e2e.ts`. `test/support/` has `createTestApp`, `resetDatabase` (refuses non-`_test`

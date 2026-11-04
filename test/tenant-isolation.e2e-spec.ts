@@ -12,6 +12,7 @@ import {
 import { Permission } from '../src/auth/permission.js';
 import { invite } from './support/invitations.js';
 import { addMember } from './support/members.js';
+import { seedVersion } from './support/seed.js';
 import {
   buildWorld,
   fingerprint,
@@ -47,6 +48,7 @@ type Target = Pick<
   | 'memberId'
   | 'roleId'
   | 'invitationId'
+  | 'versionId'
   | 'mediaName'
 >;
 
@@ -158,6 +160,19 @@ const ROUTES: Probe[] = [
     disposable: true,
     call: (t) =>
       patch(`/content/${t.aboutId}`, { title: 'Changed by an attack' }),
+  },
+  {
+    // Versions of a page (version-history T1): whoever may edit the page reads them.
+    key: 'GET /content/:id/versions',
+    kind: 'site',
+    ids: true,
+    call: (t) => get(`/content/${t.aboutId}/versions`),
+  },
+  {
+    key: 'GET /content/:id/versions/:versionId',
+    kind: 'site',
+    ids: true,
+    call: (t) => get(`/content/${t.aboutId}/versions/${t.versionId}`),
   },
   {
     key: 'POST /content/:id/preview',
@@ -318,6 +333,7 @@ function nowhere(): Target {
     memberId: randomUUID(),
     roleId: randomUUID(),
     invitationId: randomUUID(),
+    versionId: randomUUID(),
     mediaName: `${randomUUID()}.png`,
   };
 }
@@ -422,14 +438,24 @@ async function disposable(side: Side): Promise<Target> {
       organizationId: side.organizationId,
     })
     .expect(201);
+  const draftId = await page(false);
+  const aboutId = await page(true);
+  // A version of the spare page, so the request that reads one is a valid request (the pages desk
+  // writes a version of its own on a save, T2; this one is written straight, as the world's are).
+  const version = await seedVersion(w.dataSource, {
+    siteId: side.siteId,
+    contentId: aboutId,
+    createdBy: side.owner.userId,
+  });
   return {
     siteId: spare.body.site.id,
     organizationId: side.organizationId,
-    draftId: await page(false),
-    aboutId: await page(true),
+    draftId,
+    aboutId,
     memberId: member.userId,
     roleId: side.roleId,
     invitationId: invited.id,
+    versionId: version.id,
     mediaName: side.mediaName,
   };
 }

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { invite, roleIdOf } from './support/invitations.js';
 import { addMember } from './support/members.js';
+import { seedVersion } from './support/seed.js';
 import {
   buildWorld,
   fingerprint,
@@ -266,6 +267,7 @@ type Ids = {
   memberId: string;
   roleId: string;
   invitationId: string;
+  versionId: string;
 };
 
 const nowhere = (): Ids => ({
@@ -275,6 +277,7 @@ const nowhere = (): Ids => ({
   memberId: randomUUID(),
   roleId: randomUUID(),
   invitationId: randomUUID(),
+  versionId: randomUUID(),
 });
 
 /**
@@ -328,6 +331,22 @@ async function addSibling() {
     'Author',
   );
 
+  // A version of its page, written straight (a save writes its own from version-history T2 on).
+  const version = await seedVersion(w.dataSource, {
+    siteId,
+    contentId: aboutId,
+    createdBy: owner.userId,
+    snapshot: {
+      title: 'Pinecone About',
+      blocks: [],
+      data: {},
+      seoTitle: null,
+      seoDescription: null,
+      canonicalUrl: null,
+      noIndex: false,
+    },
+  });
+
   const ids: Ids = {
     siteId,
     aboutId,
@@ -335,6 +354,7 @@ async function addSibling() {
     memberId: member.userId,
     roleId: await roleIdOf(w.app, siteId, 'Author'),
     invitationId: invited.id,
+    versionId: version.id,
   };
   // The owner is on both websites, so the owner's id is rightly in answers for either.
   const everyId = [...(await ownedIds(w.dataSource, siteId)), mediaName].filter(
@@ -385,6 +405,11 @@ describe('two websites of one organization', () => {
         { method: 'get', path: '/media' },
         { method: 'get', path: '/appearance' },
         { method: 'get', path: '/members' },
+        { method: 'get', path: `/content/${w.A.aboutId}/versions` },
+        {
+          method: 'get',
+          path: `/content/${w.A.aboutId}/versions/${w.A.versionId}`,
+        },
       ];
       for (const door of doors) {
         const there = await call(
@@ -417,6 +442,12 @@ describe('two websites of one organization', () => {
         { method: 'post' as const, path: `/content/${t.draftId}/publish` },
         { method: 'post' as const, path: `/content/${t.aboutId}/unpublish` },
         { method: 'post' as const, path: `/content/${t.draftId}/preview` },
+        { method: 'get' as const, path: `/content/${t.aboutId}/versions` },
+        // The other website's version under one's own page: not that page's, so not found.
+        {
+          method: 'get' as const,
+          path: `/content/${w.A.aboutId}/versions/${t.versionId}`,
+        },
         {
           method: 'patch' as const,
           path: `/members/${t.memberId}`,
@@ -446,7 +477,13 @@ describe('two websites of one organization', () => {
       }
 
       // 3. Lists under one's own header show nothing of the other website.
-      for (const path of ['/content', '/content-types', '/media', '/members']) {
+      for (const path of [
+        '/content',
+        '/content-types',
+        '/media',
+        '/members',
+        `/content/${w.A.aboutId}/versions`,
+      ]) {
         const res = await call('get', path, own);
         expect(leaks(res), `${label}: ${path}`).toBeNull();
       }
