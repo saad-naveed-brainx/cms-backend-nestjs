@@ -99,9 +99,16 @@ export const listQuery = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+/** A page's versions: a slice of 20 by default, at most 100 (version-history T1, plan D7). */
+export const versionsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 export type CreatePageBody = z.infer<typeof createPageBody>;
 export type UpdatePageBody = z.infer<typeof updatePageBody>;
 export type ListQuery = z.infer<typeof listQuery>;
+export type VersionsQuery = z.infer<typeof versionsQuery>;
 
 /** The checked value, or a 400 whose `errors` list the problems, one `field: message` line each. */
 export function parseOr400<T extends z.ZodType>(
