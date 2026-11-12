@@ -16,7 +16,12 @@ describe('the platform-admin desk', () => {
     expect(
       methods,
       'Every name on the class counts, private helpers included: keep those outside the class.',
-    ).toEqual(['grantPlatformAdmin', 'revokePlatformAdmin']);
+    ).toEqual([
+      'createOrganization',
+      'grantPlatformAdmin',
+      'listOrganizations',
+      'revokePlatformAdmin',
+    ]);
   });
 
   it('[UC-PA-26] extends no base class', () => {

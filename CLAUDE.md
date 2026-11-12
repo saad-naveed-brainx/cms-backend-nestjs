@@ -67,7 +67,16 @@ reach it over REST.
   immediate; sign-in and `/auth/me` carry `user.isPlatformAdmin`. `PlatformAdminRepository` is the **fifth unscoped desk** (users,
   organisations, owner invitations; never website data); its method list is pinned by `test/platform-admin-repository.spec.ts`.
   `organizations.owner_id` may be empty (the organisation waits for its owner's invitation) and `organizations.suspended_at` marks a
-  suspended one; both arrive with the routes of T2 to T5.
+  suspended one (the suspend routes arrive in T4).
+  **Platform routes** (`PlatformAdminController`, `/platform/...`, a sign-in, no `X-Site-Id`, `@UseGuards(PlatformAdminGuard)`; 401 with
+  no sign-in, 403 for anyone who is not a super admin): `GET /platform/organizations` (`{ items: [{ id, name, status: 'active' | 'suspended' |
+  'awaiting_owner', owner: { id, email, name } | null, pendingOwnerEmail, websites, createdAt }] }`, by name) and `POST /platform/organizations`
+  (`{ name, ownerEmail, ownerName? }`, strict; name trimmed 1 to 100 with no NUL like `POST /organizations`). An email that has an account makes that
+  person the owner at once (`ownerName` is ignored); otherwise `ownerName` is required (400 without) and the organisation is made with no owner plus
+  an `organization_invitations` row, and the answer carries `ownerInvitation: { email, name, token, expiresAt }` **once**: the token is 32 random bytes
+  as base64url, only its SHA-256 is stored, 7 days (the same helpers as site invitations, `invitations.service.ts`). The isolation table
+  (`test/tenant-isolation.e2e-spec.ts`) skips `/platform/...` until T6 brings those routes in; `test/platform-admin-organizations.e2e-spec.ts`
+  covers them meanwhile.
 - **Creating a tenant** is `npm run seed -- --organization … --site … --host … --email … --name …`
   (`--host` repeats; the first is primary). The admin's password is only ever `SEED_ADMIN_PASSWORD`
   (12+ characters), never a flag; unset, a new user gets a generated one, printed once, and an

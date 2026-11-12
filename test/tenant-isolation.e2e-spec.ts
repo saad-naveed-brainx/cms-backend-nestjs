@@ -509,6 +509,9 @@ describe('every door is known', () => {
             ) ?? [];
           const kind: Kind = isPublic ? 'open' : siteScoped ? 'site' : 'person';
           for (const base of bases) {
+            // The super admin's routes (`/platform/...`) are checked by
+            // `test/platform-admin-*.e2e-spec.ts`; platform-admin T6 brings them into this table.
+            if (base === 'platform') continue;
             for (const path of paths) {
               const joined =
                 '/' +

@@ -50,7 +50,7 @@ const NewAccount = z.object({
 });
 
 /** 32 random bytes as base64url (43 characters): the secret after `#` in the link (plan D4). */
-function newToken(): string {
+export function newToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
