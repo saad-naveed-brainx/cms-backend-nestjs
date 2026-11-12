@@ -14,10 +14,8 @@ import { createPageBody, updatePageBody } from '../content/content-input.js';
 import { ContentRepository } from '../content/content.repository.js';
 import { ContentService } from '../content/content.service.js';
 import { InvitationAcceptanceRepository } from '../invitations/invitation-acceptance.repository.js';
-import {
-  InvitationsService,
-  hashToken,
-} from '../invitations/invitations.service.js';
+import { hashToken } from '../invitations/invitation-token.js';
+import { InvitationsService } from '../invitations/invitations.service.js';
 import { MediaService } from '../media/media.service.js';
 import {
   SiteMemberRepository,
@@ -343,6 +341,7 @@ async function makeClient(
     roleId: '',
     roleName: 'Administrator',
     permissions: Object.values(Permission),
+    organizationSuspended: false,
   };
   const who = { id: user.id };
 

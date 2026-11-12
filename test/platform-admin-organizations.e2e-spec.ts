@@ -77,6 +77,7 @@ describe('creating an organization for an owner with an account', () => {
       id: res.body.id,
       name: 'Acme',
       ownsOrganization: true,
+      suspended: false,
     });
   });
 

@@ -4,15 +4,16 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * Platform admin (D-062): `users.is_platform_admin` (default false), `organizations.suspended_at`
  * (null = active), `organizations.owner_id` may be empty while a new owner's invitation waits, and the
  * `organization_invitations` table (one waiting owner invitation per organization, the secret kept only
- * as its SHA-256). No existing row changes: every user is not a super admin, every organization is
- * active and keeps its owner. `down` fails if an organization is still waiting for its owner.
+ * as its SHA-256, and whether the old owner is removed when it is used). No existing row changes: every
+ * user is not a super admin, every organization is active and keeps its owner. `down` fails if an
+ * organization is still waiting for its owner.
  */
-export class AddPlatformAdmin1794470965710 implements MigrationInterface {
-  name = 'AddPlatformAdmin1794470965710';
+export class AddPlatformAdmin1794474055974 implements MigrationInterface {
+  name = 'AddPlatformAdmin1794474055974';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TABLE "organization_invitations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "organization_id" uuid NOT NULL, "email" text NOT NULL, "name" text NOT NULL, "token_hash" text NOT NULL, "expires_at" TIMESTAMP WITH TIME ZONE NOT NULL, "invited_by" uuid, CONSTRAINT "organization_invitations_token_hash_key" UNIQUE ("token_hash"), CONSTRAINT "organization_invitations_organization_id_key" UNIQUE ("organization_id"), CONSTRAINT "organization_invitations_email_lowercase_check" CHECK ("email" = lower("email")), CONSTRAINT "organization_invitations_pkey" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "organization_invitations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "organization_id" uuid NOT NULL, "email" text NOT NULL, "name" text NOT NULL, "token_hash" text NOT NULL, "expires_at" TIMESTAMP WITH TIME ZONE NOT NULL, "remove_previous_owner" boolean NOT NULL DEFAULT false, "invited_by" uuid, CONSTRAINT "organization_invitations_token_hash_key" UNIQUE ("token_hash"), CONSTRAINT "organization_invitations_organization_id_key" UNIQUE ("organization_id"), CONSTRAINT "organization_invitations_email_lowercase_check" CHECK ("email" = lower("email")), CONSTRAINT "organization_invitations_pkey" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE INDEX "organization_invitations_invited_by_idx" ON "organization_invitations"  ("invited_by") `,

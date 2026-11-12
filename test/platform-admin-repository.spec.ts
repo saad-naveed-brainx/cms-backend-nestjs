@@ -17,10 +17,16 @@ describe('the platform-admin desk', () => {
       methods,
       'Every name on the class counts, private helpers included: keep those outside the class.',
     ).toEqual([
+      'acceptOwnerInvitation',
+      'assignOwner',
       'createOrganization',
+      'deleteOrganization',
+      'findOwnerInvitationByTokenHash',
       'grantPlatformAdmin',
+      'issueOwnerInvitation',
       'listOrganizations',
       'revokePlatformAdmin',
+      'setSuspended',
     ]);
   });
 

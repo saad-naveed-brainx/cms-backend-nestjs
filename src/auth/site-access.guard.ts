@@ -10,6 +10,7 @@ import { Reflector } from '@nestjs/core';
 import { isUuid } from '../database/scoped.repository.js';
 import { SiteMemberRepository } from '../members/site-member.repository.js';
 import {
+  ALLOWED_WHEN_SUSPENDED,
   REQUIRED_PERMISSIONS,
   SITE_SCOPED,
   type AuthenticatedRequest,
@@ -28,6 +29,8 @@ import type { Permission } from './permission.js';
  *   answer does not say which site ids exist. A missing permission is that same 403.
  * - The role is read on every request, so a changed role or a removed member takes effect at once.
  * - A `siteId` in the body or query string is never looked at.
+ * - While the platform has suspended the site's organisation, anything but a read is a 403 with the code
+ *   `organization_suspended` (platform-admin T4).
  */
 @Injectable()
 export class SiteAccessGuard implements CanActivate {
@@ -72,7 +75,33 @@ export class SiteAccessGuard implements CanActivate {
       throw new ForbiddenException();
     }
 
+    // The platform suspended the organisation (D-062): members may look, nothing may change.
+    if (
+      access.organizationSuspended &&
+      !readsOnly(request, this.reflector, context)
+    ) {
+      throw new ForbiddenException({
+        message: 'This organization is suspended by the platform',
+        code: 'organization_suspended',
+      });
+    }
+
     request.site = { siteId, ...access };
     return true;
   }
+}
+
+/** GET, HEAD and OPTIONS read; so does a route marked `@AllowedWhenSuspended()` (a preview link). */
+function readsOnly(
+  request: AuthenticatedRequest,
+  reflector: Reflector,
+  context: ExecutionContext,
+): boolean {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return true;
+  return (
+    reflector.getAllAndOverride<boolean | undefined>(ALLOWED_WHEN_SUSPENDED, [
+      context.getHandler(),
+      context.getClass(),
+    ]) === true
+  );
 }

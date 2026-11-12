@@ -79,6 +79,7 @@ describe('GET /auth/me and the token guard', () => {
           id: corrick.site.organizationId,
           name: 'Agency',
           ownsOrganization: false,
+          suspended: false,
         },
       ],
     });
@@ -129,6 +130,7 @@ describe('GET /auth/me and the token guard', () => {
           id: corrick.site.organizationId,
           name: 'Agency',
           ownsOrganization: false,
+          suspended: false,
         },
       ],
     });

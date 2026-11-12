@@ -41,6 +41,13 @@ export class OrganizationInvitation extends TimestampedEntity {
   @Column('timestamptz')
   expiresAt: Date;
 
+  /**
+   * When the organisation already has an owner (a handover, plan D6), the link also takes the old owner off
+   * the organisation's websites once it is used. Only meaningful then.
+   */
+  @Column('boolean', { default: false })
+  removePreviousOwner: boolean;
+
   @Column('uuid', { nullable: true })
   @ForeignKey(() => User, { onDelete: 'SET NULL' })
   invitedBy: string | null;

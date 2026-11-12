@@ -1,6 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import type { DataSource } from 'typeorm';
-import { AddPlatformAdmin1794470965710 } from '../src/database/migrations/1794470965710-AddPlatformAdmin.js';
+import { AddPlatformAdmin1794474055974 } from '../src/database/migrations/1794474055974-AddPlatformAdmin.js';
 import { createTestApp } from './support/app.js';
 
 let app: INestApplication;
@@ -17,7 +17,7 @@ describe('the AddPlatformAdmin migration', () => {
   it('[UC-PA-40] keeps every organization, its owner and every account as they were', async () => {
     // Everything happens in one transaction that is rolled back: the schema goes back to what it was
     // before the migration, rows are written the old way, and the migration runs again over them.
-    const migration = new AddPlatformAdmin1794470965710();
+    const migration = new AddPlatformAdmin1794474055974();
     const runner = dataSource.createQueryRunner();
     await runner.connect();
     await runner.startTransaction();

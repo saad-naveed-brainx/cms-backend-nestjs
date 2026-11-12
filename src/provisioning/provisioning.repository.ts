@@ -16,6 +16,7 @@ import { HOME_PATH } from '../public/public-path.js';
 import {
   HostnameTakenError,
   NotOrganizationOwnerError,
+  OrganizationSuspendedError,
 } from './tenant-input.js';
 
 /** Everything needed to create a tenant. The addresses are already tidied, and the first is primary. */
@@ -88,7 +89,7 @@ const ADDRESS_UNIQUE_CONSTRAINT = 'hostnames_hostname_key';
  *
  * Kept narrow on purpose:
  * - It only creates. It reads nothing for anyone else, updates nothing and deletes nothing, and
- *   `createTenant`, `createSite` and `createOrganization` are its only methods: a helper belongs
+ *   `createTenant` and `createSite` are its only methods: a helper belongs
  *   in a plain function outside this class.
  * - Every site-owned row it writes carries the id of the site it has just created, never one
  *   passed in, so it cannot write into an existing tenant (invariant 1).
@@ -150,22 +151,9 @@ export class ProvisioningRepository {
         ownerId: data.userId,
       });
       if (!owned) throw new NotOrganizationOwnerError();
+      if (owned.suspendedAt) throw new OrganizationSuspendedError();
       return createSiteRows(manager, data);
     });
-  }
-
-  /**
-   * Makes an organisation owned by `ownerId`, with no site yet (organizations T2). The name is
-   * already tidied. Nothing is checked about the owner: the caller is the person signed in.
-   */
-  async createOrganization(
-    ownerId: string,
-    name: string,
-  ): Promise<{ id: string; name: string }> {
-    const organization = await this.dataSource.manager.save(
-      this.dataSource.manager.create(Organization, { name, ownerId }),
-    );
-    return { id: organization.id, name: organization.name };
   }
 }
 

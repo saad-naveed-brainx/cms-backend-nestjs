@@ -119,6 +119,7 @@ describe('the auth guards', () => {
         roleId: corrick.editor.id,
         roleName: 'Editor',
         permissions: corrick.editor.permissions,
+        organizationSuspended: false,
       },
     });
   });
@@ -274,6 +275,7 @@ describe('the auth guards', () => {
       roleId: corrick.admin.id,
       roleName: 'Admin',
       permissions: corrick.admin.permissions,
+      organizationSuspended: false,
     });
     // The handler did receive the body and the query, so ignoring them was a decision.
     expect(res.body.body).toEqual({ siteId: bakery.site.id });

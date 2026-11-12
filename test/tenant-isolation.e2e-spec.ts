@@ -269,17 +269,6 @@ const ROUTES: Probe[] = [
     call: () => get('/organizations'),
   },
   {
-    // Whoever is signed in may make one and owns it (organizations T2, D-056).
-    key: 'POST /organizations',
-    kind: 'person',
-    call: () => post('/organizations', { name: `Organization ${uniq()}` }),
-    creates: {
-      table: 'organizations',
-      owner: 'owner_id',
-      idOf: (b) => b.id,
-    },
-  },
-  {
     // Only the organization's owner reads its team (organizations T3, D-054); anyone else is told
     // what is told of an organization that is not there.
     key: 'GET /organizations/:id/team',

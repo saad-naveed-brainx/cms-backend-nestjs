@@ -18,6 +18,7 @@ import {
 } from '../auth/decorators.js';
 import { Permission } from '../auth/permission.js';
 import { parseOr400 } from '../content/content-input.js';
+import type { OwnerInvitationLookup } from '../platform-admin/platform-admin.service.js';
 import {
   InvitationsService,
   type InvitationLookup,
@@ -66,7 +67,9 @@ export class InvitationsController {
   @Public()
   @Post('lookup')
   @HttpCode(200)
-  lookup(@Body() body: unknown): Promise<InvitationLookup> {
+  lookup(
+    @Body() body: unknown,
+  ): Promise<InvitationLookup | OwnerInvitationLookup> {
     const { token } = parseOr400(LookupBody, body);
     return this.invitations.lookup(token);
   }

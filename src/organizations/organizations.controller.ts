@@ -1,12 +1,12 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { CurrentUser, type AuthUser } from '../auth/decorators.js';
-import { toHttpError } from '../provisioning/http-errors.js';
 import { ProvisioningService } from '../provisioning/provisioning.service.js';
 import { OrganizationTeamService } from './organization-team.service.js';
 
 /**
- * The routes about organisations (organizations T2). Like `POST /sites` they need a sign-in and no
- * `X-Site-Id`: they are about the person, not about one site.
+ * The routes about the organisations a person owns. Like `POST /sites` they need a sign-in and no
+ * `X-Site-Id`: they are about the person, not about one site. An organisation is made by the platform's
+ * super admin (`POST /platform/organizations`, D-062); no ordinary person makes one.
  */
 @Controller('organizations')
 export class OrganizationsController {
@@ -29,18 +29,5 @@ export class OrganizationsController {
   @Get(':id/team')
   team(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.teams.team(user.id, id);
-  }
-
-  /**
-   * Makes an organisation owned by the signed-in person, who may then add websites to it. Any
-   * signed-in person may, with no limit (D-056). 201 `{ id, name }`.
-   */
-  @Post()
-  async create(@CurrentUser() user: AuthUser, @Body() body: unknown) {
-    try {
-      return await this.provisioning.createOrganization(user.id, body);
-    } catch (error) {
-      throw toHttpError(error);
-    }
   }
 }

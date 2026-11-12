@@ -252,6 +252,7 @@ describe('creating a tenant', () => {
       host: 'orchard.test',
       canonicalHost: 'orchard.test',
       isCanonical: true,
+      suspended: false,
     });
   });
 
@@ -754,8 +755,8 @@ describe('creating a tenant', () => {
     // The second unscoped desk is as narrow as the first: its three creations, named for what they do.
     expect(
       methodsOf(ProvisioningRepository),
-      'ProvisioningRepository is the only place that creates a tenant, a site or an organization, so it has createOrganization, createSite and createTenant and nothing else (helpers belong outside the class)',
-    ).toEqual(['createOrganization', 'createSite', 'createTenant']);
+      'ProvisioningRepository is the only place that creates a tenant or a site, so it has createSite and createTenant and nothing else (helpers belong outside the class)',
+    ).toEqual(['createSite', 'createTenant']);
 
     // The lint rule lets only `*.repository.ts` import TypeORM: of the new files, only this one does.
     const srcDir = fileURLToPath(new URL('../src/', import.meta.url));

@@ -18,6 +18,8 @@ export type ResolvedHost = {
   host: string;
   canonicalHost: string;
   isCanonical: boolean;
+  /** The site's organisation is suspended by the platform (T4): the public site is unavailable. */
+  suspended: boolean;
 };
 
 /**
@@ -139,6 +141,7 @@ export class SiteResolver {
       host,
       canonicalHost,
       isCanonical: canonicalHost === host,
+      suspended: site.suspended,
     };
   }
 }

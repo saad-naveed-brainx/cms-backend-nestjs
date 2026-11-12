@@ -88,6 +88,7 @@ describe('GET /sites/resolve', () => {
     host,
     canonicalHost,
     isCanonical: host === canonicalHost,
+    suspended: false,
   });
 
   /** Runs `call` and returns what it gave back and the SQL statements sent meanwhile. */
@@ -384,6 +385,7 @@ describe('GET /sites/resolve', () => {
         'host',
         'isCanonical',
         'site',
+        'suspended',
       ]);
       expect(Object.keys(res.body.site).sort(), host).toEqual([
         'id',

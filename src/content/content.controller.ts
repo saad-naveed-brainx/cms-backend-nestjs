@@ -9,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  AllowedWhenSuspended,
   CurrentSite,
   CurrentUser,
   RequirePermission,
@@ -113,6 +114,7 @@ export class ContentController {
    * address (`?preview=<token>` on the website). Any member of the site may ask for one.
    */
   @Post(':id/preview')
+  @AllowedWhenSuspended()
   @HttpCode(200)
   @SiteScoped()
   preview(@CurrentSite() site: SiteAccess, @Param('id') id: string) {

@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
+import { MediaModule } from '../media/media.module.js';
+import { SitesModule } from '../sites/sites.module.js';
+import { WebsiteModule } from '../website/website.module.js';
 import { PlatformModule } from '../platform/platform.module.js';
 import { PlatformAdminController } from './platform-admin.controller.js';
 import { PlatformAdminGuard } from './platform-admin.guard.js';
@@ -12,7 +15,13 @@ import { PlatformAdminService } from './platform-admin.service.js';
  * read across organisations.
  */
 @Module({
-  imports: [PlatformModule, AuthModule],
+  imports: [
+    PlatformModule,
+    AuthModule,
+    SitesModule,
+    WebsiteModule,
+    MediaModule,
+  ],
   controllers: [PlatformAdminController],
   providers: [
     PlatformAdminService,

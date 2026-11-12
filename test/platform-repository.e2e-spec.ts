@@ -158,7 +158,8 @@ describe('platform desk: cross-site lookups', () => {
 
       const found = await platform.findSiteByHostname('corrick.test');
 
-      expect(found).toEqual(stored);
+      // The whole row, plus whether its organisation is suspended (platform-admin T4).
+      expect(found).toEqual({ ...stored, suspended: false });
       expect(found?.theme).toEqual({ palette: 'forest' });
       expect(found?.settings).toEqual({ footer: 'Since 1990' });
     });

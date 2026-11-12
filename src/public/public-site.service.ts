@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ContentTypeRepository } from '../content-types/content-type.repository.js';
@@ -271,6 +272,14 @@ export class PublicSiteService {
     }
     if (!resolved)
       throw new NotFoundException('No site answers on this address');
+    if (resolved.suspended) {
+      // The platform suspended the organisation (D-062): nothing is shown, and the website tells the
+      // visitor the site is unavailable. The code is what the website looks for.
+      throw new ServiceUnavailableException({
+        message: 'This site is unavailable',
+        code: 'site_suspended',
+      });
+    }
     return resolved;
   }
 }
