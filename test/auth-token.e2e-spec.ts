@@ -54,7 +54,12 @@ describe('GET /auth/me and the token guard', () => {
     const first = await me(authorization);
     expect(first.status).toBe(200);
     expect(first.body).toEqual({
-      user: { id: ayesha.id, email: 'ayesha@corrick.test', name: 'Ayesha' },
+      user: {
+        id: ayesha.id,
+        email: 'ayesha@corrick.test',
+        name: 'Ayesha',
+        isPlatformAdmin: false,
+      },
       memberships: [
         {
           site: {
@@ -103,6 +108,7 @@ describe('GET /auth/me and the token guard', () => {
         id: ayesha.id,
         email: 'ayesha@corrick.test',
         name: 'Ayesha Khan',
+        isPlatformAdmin: false,
       },
       memberships: [
         {

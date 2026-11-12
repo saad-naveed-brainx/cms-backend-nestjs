@@ -59,6 +59,15 @@ reach it over REST.
   and `InvitationAcceptanceRepository` (below). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).
+- **The super admin** (`src/platform-admin/`, platform-admin T1, `../docs/DECISIONS.md` D-062, feature `docs/features/platform-admin/`): the platform
+  operator, a flag on an ordinary account (`users.is_platform_admin`), made only from the command line:
+  `npm run create-super-admin -- --email <e> [--name <n>]` (a new account needs `--name`; its password is `SUPER_ADMIN_PASSWORD`, 12+
+  characters, never a flag, or a generated one printed once; an existing account keeps its name and password) and `--revoke` takes it
+  away. `PlatformAdminGuard` (`@UseGuards`) reads the flag from the database on every request, never from the token, so a revoke is
+  immediate; sign-in and `/auth/me` carry `user.isPlatformAdmin`. `PlatformAdminRepository` is the **fifth unscoped desk** (users,
+  organisations, owner invitations; never website data); its method list is pinned by `test/platform-admin-repository.spec.ts`.
+  `organizations.owner_id` may be empty (the organisation waits for its owner's invitation) and `organizations.suspended_at` marks a
+  suspended one; both arrive with the routes of T2 to T5.
 - **Creating a tenant** is `npm run seed -- --organization … --site … --host … --email … --name …`
   (`--host` repeats; the first is primary). The admin's password is only ever `SEED_ADMIN_PASSWORD`
   (12+ characters), never a flag; unset, a new user gets a generated one, printed once, and an

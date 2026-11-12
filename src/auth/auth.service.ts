@@ -22,7 +22,13 @@ export type Membership = {
   ownsOrganization: boolean;
 };
 
-type PublicUser = { id: string; email: string; name: string };
+type PublicUser = {
+  id: string;
+  email: string;
+  name: string;
+  /** The platform operator (platform-admin, D-062): the admin shows its Platform section to them. */
+  isPlatformAdmin: boolean;
+};
 
 /**
  * An organisation the user owns, or has a website in (organizations T1). One they own with no
@@ -174,11 +180,17 @@ export class AuthService {
   }
 }
 
-/** Only these three fields ever leave the API: never the password hash. */
+/** Only these four fields ever leave the API: never the password hash. */
 function toPublicUser(user: {
   id: string;
   email: string;
   name: string;
+  isPlatformAdmin: boolean;
 }): PublicUser {
-  return { id: user.id, email: user.email, name: user.name };
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    isPlatformAdmin: user.isPlatformAdmin,
+  };
 }

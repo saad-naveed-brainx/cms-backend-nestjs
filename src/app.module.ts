@@ -13,6 +13,7 @@ import { InvitationsModule } from './invitations/invitations.module.js';
 import { MediaModule } from './media/media.module.js';
 import { MembersModule } from './members/members.module.js';
 import { OrganizationsModule } from './organizations/organizations.module.js';
+import { PlatformAdminModule } from './platform-admin/platform-admin.module.js';
 import { PlatformModule } from './platform/platform.module.js';
 import { ProvisioningModule } from './provisioning/provisioning.module.js';
 import { PublicModule } from './public/public.module.js';
@@ -29,6 +30,7 @@ import { SitesModule } from './sites/sites.module.js';
     ContentModule,
     ContentTypesModule,
     PlatformModule,
+    PlatformAdminModule,
     ProvisioningModule,
     OrganizationsModule,
     PublicModule,

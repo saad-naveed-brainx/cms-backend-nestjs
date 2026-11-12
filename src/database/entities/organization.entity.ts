@@ -9,8 +9,15 @@ export class Organization extends TimestampedEntity {
   @Column('text')
   name: string;
 
-  /** No cascade: the owning user cannot be deleted while they own an organization. */
-  @Column('uuid')
+  /**
+   * No cascade: the owning user cannot be deleted while they own an organization. `null` while the
+   * organization waits for its first owner to use their invitation (platform-admin plan D1, D-062).
+   */
+  @Column('uuid', { nullable: true })
   @ForeignKey(() => User)
-  ownerId: string;
+  ownerId: string | null;
+
+  /** When the platform suspended it (its websites are unavailable and nobody may change anything); `null` when active. */
+  @Column('timestamptz', { nullable: true })
+  suspendedAt: Date | null;
 }
