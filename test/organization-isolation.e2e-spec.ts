@@ -202,8 +202,8 @@ describe('one organization against another', () => {
         ).toBeNull();
       }
 
-      // Making one: the other's owner or organization smuggled into the body is refused (the body
-      // is strict), in the address it is ignored, and either way nothing is made for the victim.
+      // Making one: nobody makes an organization through a route of their own (D-062), so the other's
+      // owner or organization smuggled into the body or the address gets the same 404, and nothing is made.
       const own = (await snapshot(attacker)).organizationsOwned;
       for (const smuggled of [
         { ownerId: victim.owner.userId },
@@ -219,24 +219,16 @@ describe('one organization against another', () => {
             ...smuggled,
           },
         );
-        expect(res.status, `${label}: ${JSON.stringify(smuggled)}`).toBe(400);
+        expect(res.status, `${label}: ${JSON.stringify(smuggled)}`).toBe(404);
       }
-      expect((await snapshot(attacker)).organizationsOwned, label).toBe(own);
       const made = await call(
         'post',
         `/organizations?ownerId=${victim.owner.userId}&organizationId=${victim.organizationId}`,
         bearer(attacker.owner.token),
         { name: `Mine ${attacker.tag}` },
       );
-      expect(made.status, label).toBe(201);
-      const [row] = await w.dataSource.query<{ owner: string }[]>(
-        'SELECT owner_id::text AS owner FROM organizations WHERE id = $1',
-        [made.body.id],
-      );
-      expect(row.owner, `${label}: whose it is`).toBe(attacker.owner.userId);
-      expect((await snapshot(attacker)).organizationsOwned, label).toBe(
-        own + 1,
-      );
+      expect(made.status, label).toBe(404);
+      expect((await snapshot(attacker)).organizationsOwned, label).toBe(own);
 
       // Adding a website to the other organization is refused as it is for one that is not there.
       const site = (organizationId: string) =>
@@ -542,6 +534,7 @@ describe('two websites of one organization', () => {
           id: w.A.organizationId,
           name: 'Acorn Bakery Ltd',
           ownsOrganization: false,
+          suspended: false,
         },
       ]);
       expect(leaks(me), `${label}: the profile`).toBeNull();

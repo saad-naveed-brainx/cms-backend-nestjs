@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, QueryFailedError } from 'typeorm';
+import { DataSource } from 'typeorm';
 import {
   Invitation,
   Organization,
@@ -9,6 +9,7 @@ import {
   User,
 } from '../database/entities/index.js';
 import { isUuid } from '../database/scoped.repository.js';
+import { isUserEmailTaken } from '../database/unique-email-violation.js';
 
 /** An invitation found by its link: what the invite page shows, and what accepting needs. */
 export type FoundInvitation = {
@@ -39,10 +40,6 @@ export type Acceptance =
   | { outcome: 'account-exists' }
   /** The existing account named is gone or no longer has the invitation's email. Invitation kept. */
   | { outcome: 'account-gone' };
-
-/** Postgres' code for a unique violation, and the name the migration gives the users' email rule. */
-const UNIQUE_VIOLATION = '23505';
-const USER_EMAIL_UNIQUE_CONSTRAINT = 'users_email_key';
 
 /**
  * The invitation acceptance desk: the FOURTH unscoped desk, next to the platform desk (reads),
@@ -187,17 +184,4 @@ export class InvitationAcceptanceRepository {
       throw error;
     }
   }
-}
-
-/** The users' unique email rule refused the new account: someone made it after the check. */
-function isUserEmailTaken(error: unknown): boolean {
-  if (!(error instanceof QueryFailedError)) return false;
-  const driverError = error.driverError as {
-    code?: string;
-    constraint?: string;
-  };
-  return (
-    driverError.code === UNIQUE_VIOLATION &&
-    driverError.constraint === USER_EMAIL_UNIQUE_CONSTRAINT
-  );
 }

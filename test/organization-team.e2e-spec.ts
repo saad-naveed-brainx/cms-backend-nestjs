@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { ProvisioningService } from '../src/provisioning/provisioning.service.js';
+import { Organization } from '../src/database/entities/index.js';
 import { createTestApp } from './support/app.js';
 import { resetDatabase } from './support/database.js';
 import { invite, roleIdOf } from './support/invitations.js';
@@ -92,13 +93,11 @@ async function kettleAndCrumb() {
     })
     .expect(201);
   const shopId: string = shop.body.site.id;
-  const empty = (
-    await api()
-      .post('/organizations')
-      .set(ada.headers)
-      .send({ name: 'Empty Ltd' })
-      .expect(201)
-  ).body as { id: string; name: string };
+  // An organization of Ada's with no website, as the platform makes one (D-062).
+  const empty = await dataSource
+    .getRepository(Organization)
+    .save({ name: 'Empty Ltd', ownerId: ada.userId })
+    .then(({ id, name }) => ({ id, name }));
 
   const maya = await person('maya@kettle.test', 'Maya Thornton');
   const tom = await person('tom@kettle.test', 'Tom Ashworth');
@@ -265,9 +264,9 @@ describe('the company team', () => {
         .set(headers)
         .expect(401);
       await api()
-        .post('/organizations')
+        .post('/platform/organizations')
         .set(headers)
-        .send({ name: 'Nobody Ltd' })
+        .send({ name: 'Nobody Ltd', ownerEmail: 'nobody@x.test' })
         .expect(401);
     }
     expect(await rowCounts(dataSource)).toEqual(before);

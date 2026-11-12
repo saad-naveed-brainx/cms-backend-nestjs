@@ -7,6 +7,7 @@ import { Media } from './media.entity.js';
 import { Menu } from './menu.entity.js';
 import { MenuItem } from './menu-item.entity.js';
 import { Organization } from './organization.entity.js';
+import { OrganizationInvitation } from './organization-invitation.entity.js';
 import { Redirect } from './redirect.entity.js';
 import { Revision } from './revision.entity.js';
 import { Role } from './role.entity.js';
@@ -26,6 +27,7 @@ export {
   Menu,
   MenuItem,
   Organization,
+  OrganizationInvitation,
   Redirect,
   Revision,
   Role,
@@ -55,4 +57,5 @@ export const ENTITIES = [
   Redirect,
   FormSubmission,
   Invitation,
+  OrganizationInvitation,
 ];

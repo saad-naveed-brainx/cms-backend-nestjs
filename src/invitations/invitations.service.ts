@@ -1,4 +1,3 @@
-import { createHash, randomBytes } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -6,10 +5,19 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { z } from 'zod';
 import { AuthService, type LoginResult } from '../auth/auth.service.js';
 import { PasswordService } from '../auth/password.service.js';
 import { parseOr400 } from '../content/content-input.js';
+import {
+  PlatformAdminService,
+  type OwnerInvitationLookup,
+} from '../platform-admin/platform-admin.service.js';
+import { NewAccount } from './new-account.js';
+import {
+  hashToken,
+  INVITATION_LIFETIME_MS,
+  newToken,
+} from './invitation-token.js';
 import {
   InvitationAcceptanceRepository,
   type Acceptance,
@@ -18,9 +26,6 @@ import {
   InvitationRepository,
   type InvitationView,
 } from './invitation.repository.js';
-
-/** How long a link works (plan D3). */
-export const INVITATION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const INVALID_INVITATION_MESSAGE =
   'This invite is no longer valid. Ask for a new one.';
@@ -43,22 +48,6 @@ export type InvitationLookup = {
   expiresAt: string;
 };
 
-/** A new account's details: the name trimmed, the password as typed (spaces are part of it). */
-const NewAccount = z.object({
-  name: z.string().trim().min(1).max(100),
-  password: z.string().min(12).max(256),
-});
-
-/** 32 random bytes as base64url (43 characters): the secret after `#` in the link (plan D4). */
-function newToken(): string {
-  return randomBytes(32).toString('base64url');
-}
-
-/** What the database keeps instead of the secret (D-047): its SHA-256, in hex. */
-export function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
-
 /**
  * Invitations (users-roles T3, plan D3, D7): an Administrator makes, renews and cancels them on
  * their site; the person holding a link looks it up and accepts it, as a new account or with
@@ -73,6 +62,7 @@ export class InvitationsService {
     private readonly acceptance: InvitationAcceptanceRepository,
     private readonly auth: AuthService,
     private readonly passwords: PasswordService,
+    private readonly owners: PlatformAdminService,
   ) {}
 
   /** `email` is already trimmed and lower-cased. A waiting invite for it on this site is replaced. */
@@ -125,8 +115,13 @@ export class InvitationsService {
   }
 
   /** What the invite page shows. Used, cancelled, expired and unknown links are the same 404. */
-  async lookup(token: string): Promise<InvitationLookup> {
-    const found = await this.findValid(token);
+  async lookup(
+    token: string,
+  ): Promise<InvitationLookup | OwnerInvitationLookup> {
+    // A link that is no website's invitation may be an organisation's owner link (D-062).
+    const found = await this.acceptance.findByTokenHash(hashToken(token));
+    if (!found) return this.owners.lookupOwnerInvitation(token);
+    this.assertLive(found);
     return {
       site: { id: found.siteId, name: found.siteName },
       organization: { id: found.organizationId, name: found.organizationName },
@@ -153,8 +148,19 @@ export class InvitationsService {
     password: string,
     name: unknown,
   ): Promise<LoginResult> {
-    const found = await this.findValid(token);
     const tokenHash = hashToken(token);
+    const found = await this.acceptance.findByTokenHash(tokenHash);
+    if (!found) {
+      const userId = await this.owners.acceptOwnerInvitation(
+        token,
+        password,
+        name,
+      );
+      const answer = await this.auth.signIn(userId);
+      if (!answer) throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
+      return answer;
+    }
+    this.assertLive(found);
 
     let result: Acceptance;
     if (found.hasAccount) {
@@ -208,12 +214,10 @@ export class InvitationsService {
     return user?.id ?? null;
   }
 
-  /** The invitation behind this link when it is there and not expired; otherwise the 404. */
-  private async findValid(token: string) {
-    const found = await this.acceptance.findByTokenHash(hashToken(token));
-    if (!found || found.expiresAt.getTime() <= Date.now()) {
+  /** An invitation past its expiry is the same 404 as one that is not there. */
+  private assertLive(found: { expiresAt: Date }): void {
+    if (found.expiresAt.getTime() <= Date.now()) {
       throw new NotFoundException(INVALID_INVITATION_MESSAGE);
     }
-    return found;
   }
 }

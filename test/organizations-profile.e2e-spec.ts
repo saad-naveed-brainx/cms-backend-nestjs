@@ -91,16 +91,23 @@ describe('the profile lists the organizations', () => {
     for (const answer of [login.body, me.body]) {
       // By name: Maple Books Ltd (not hers), Orchard Bakery Ltd and Spare Ltd (hers).
       expect(answer.organizations).toEqual([
-        { id: mapleOrg.id, name: 'Maple Books Ltd', ownsOrganization: false },
+        {
+          id: mapleOrg.id,
+          name: 'Maple Books Ltd',
+          ownsOrganization: false,
+          suspended: false,
+        },
         {
           id: orchardOrg.id,
           name: 'Orchard Bakery Ltd',
           ownsOrganization: true,
+          suspended: false,
         },
         {
           id: expect.any(String),
           name: 'Spare Ltd',
           ownsOrganization: true,
+          suspended: false,
         },
       ]);
       const organizationIdOf = (siteId: string) =>
@@ -113,7 +120,12 @@ describe('the profile lists the organizations', () => {
     // Someone with one website in one organization gets one entry.
     const maxMe = await api().get('/auth/me').set(max.headers).expect(200);
     expect(maxMe.body.organizations).toEqual([
-      { id: mapleOrg.id, name: 'Maple Books Ltd', ownsOrganization: true },
+      {
+        id: mapleOrg.id,
+        name: 'Maple Books Ltd',
+        ownsOrganization: true,
+        suspended: false,
+      },
     ]);
   });
 });
@@ -142,7 +154,7 @@ describe('an invitation names its site and organization', () => {
       .send({ token, name: 'Nina Novak', password: 'a long enough password' })
       .expect(200);
     expect(accepted.body.organizations).toEqual([
-      { id: org.id, name: org.name, ownsOrganization: false },
+      { id: org.id, name: org.name, ownsOrganization: false, suspended: false },
     ]);
     expect(accepted.body.memberships).toHaveLength(1);
     expect(accepted.body.memberships[0].site.organizationId).toBe(org.id);

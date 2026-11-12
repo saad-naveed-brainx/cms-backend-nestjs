@@ -6,6 +6,7 @@ import {
 import {
   HostnameTakenError,
   NotOrganizationOwnerError,
+  OrganizationSuspendedError,
   OrganizationRequiredError,
   ProvisionInputError,
 } from './tenant-input.js';
@@ -25,6 +26,12 @@ export function toHttpError(error: unknown): unknown {
     return new BadRequestException({
       message: 'Invalid request',
       errors: [`organizationId: ${error.message}`],
+    });
+  }
+  if (error instanceof OrganizationSuspendedError) {
+    return new ForbiddenException({
+      message: error.message,
+      code: 'organization_suspended',
     });
   }
   if (error instanceof NotOrganizationOwnerError) {

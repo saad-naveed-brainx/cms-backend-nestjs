@@ -122,7 +122,7 @@ export class OrganizationTeamService {
     });
 
     return {
-      organization,
+      organization: { id: organization.id, name: organization.name },
       websites: sites.map((site, order) => ({
         ...site,
         roles: lists[order].roles,

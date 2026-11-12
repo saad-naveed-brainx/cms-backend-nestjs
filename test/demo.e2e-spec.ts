@@ -239,11 +239,13 @@ describe('npm run demo', () => {
         id: expect.any(String),
         name: 'Kettle & Crumb Ltd',
         ownsOrganization: true,
+        suspended: false,
       },
       {
         id: expect.any(String),
         name: 'Studio Halden AS',
         ownsOrganization: true,
+        suspended: false,
       },
     ]);
 

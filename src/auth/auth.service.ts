@@ -22,7 +22,13 @@ export type Membership = {
   ownsOrganization: boolean;
 };
 
-type PublicUser = { id: string; email: string; name: string };
+type PublicUser = {
+  id: string;
+  email: string;
+  name: string;
+  /** The platform operator (platform-admin, D-062): the admin shows its Platform section to them. */
+  isPlatformAdmin: boolean;
+};
 
 /**
  * An organisation the user owns, or has a website in (organizations T1). One they own with no
@@ -32,6 +38,8 @@ export type OrganizationSummary = {
   id: string;
   name: string;
   ownsOrganization: boolean;
+  /** The platform suspended it: its people may look, not change (platform-admin T4). */
+  suspended: boolean;
 };
 
 /** What `/auth/me` answers: who the token belongs to, as the database has it now. */
@@ -162,8 +170,8 @@ export class AuthService {
     for (const { organization, ownsOrganization } of rows) {
       organizations.set(organization.id, { ...organization, ownsOrganization });
     }
-    for (const { id, name } of owned) {
-      organizations.set(id, { id, name, ownsOrganization: true });
+    for (const { id, name, suspended } of owned) {
+      organizations.set(id, { id, name, ownsOrganization: true, suspended });
     }
     return {
       memberships,
@@ -174,11 +182,17 @@ export class AuthService {
   }
 }
 
-/** Only these three fields ever leave the API: never the password hash. */
+/** Only these four fields ever leave the API: never the password hash. */
 function toPublicUser(user: {
   id: string;
   email: string;
   name: string;
+  isPlatformAdmin: boolean;
 }): PublicUser {
-  return { id: user.id, email: user.email, name: user.name };
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    isPlatformAdmin: user.isPlatformAdmin,
+  };
 }

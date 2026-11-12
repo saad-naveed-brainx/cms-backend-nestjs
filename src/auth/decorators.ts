@@ -16,6 +16,8 @@ export type SiteAccess = {
   roleId: string;
   roleName: string;
   permissions: Permission[];
+  /** The site's organisation is suspended by the platform (T4). */
+  organizationSuspended: boolean;
 };
 
 /** A request after the two guards have run. A field is missing when its guard did not apply. */
@@ -27,6 +29,14 @@ export type AuthenticatedRequest = Request & {
 export const IS_PUBLIC = 'auth:public';
 export const SITE_SCOPED = 'auth:site-scoped';
 export const REQUIRED_PERMISSIONS = 'auth:permissions';
+export const ALLOWED_WHEN_SUSPENDED = 'auth:allowed-when-suspended';
+
+/**
+ * A route that only reads, though it is a POST (a preview link): it still works while the platform has
+ * suspended the site's organisation. Every other route that is not GET, HEAD or OPTIONS is refused then.
+ */
+export const AllowedWhenSuspended = () =>
+  SetMetadata(ALLOWED_WHEN_SUSPENDED, true);
 
 /** No token needed. Every route without this requires one (secure by default). */
 export const Public = () => SetMetadata(IS_PUBLIC, true);

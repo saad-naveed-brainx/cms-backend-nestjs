@@ -59,6 +59,41 @@ reach it over REST.
   and `InvitationAcceptanceRepository` (below). A desk method that needs an
   all-or-nothing save opens its own transaction; no transaction object leaves the desk
   (`../docs/DECISIONS.md` D-015).
+- **The super admin** (`src/platform-admin/`, platform-admin T1, `../docs/DECISIONS.md` D-062, feature `docs/features/platform-admin/`): the platform
+  operator, a flag on an ordinary account (`users.is_platform_admin`), made only from the command line:
+  `npm run create-super-admin -- --email <e> [--name <n>]` (a new account needs `--name`; its password is `SUPER_ADMIN_PASSWORD`, 12+
+  characters, never a flag, or a generated one printed once; an existing account keeps its name and password) and `--revoke` takes it
+  away. `PlatformAdminGuard` (`@UseGuards`) reads the flag from the database on every request, never from the token, so a revoke is
+  immediate; sign-in and `/auth/me` carry `user.isPlatformAdmin`. `PlatformAdminRepository` is the **fifth unscoped desk** (users,
+  organisations, owner invitations; never website data); its method list is pinned by `test/platform-admin-repository.spec.ts`.
+  `organizations.owner_id` may be empty (the organisation waits for its owner's invitation) and `organizations.suspended_at` marks a
+  suspended one.
+  **Suspend, hand over, delete** (T4, T5): `POST /platform/organizations/:id/suspend` and `/reactivate` (200, idempotent, 404 for an id that is not
+  there or not an id); a suspended organisation's website answers `GET /public/site` with a 503 `{ code: 'site_suspended' }` (the resolver's
+  answer carries `suspended`), and `SiteAccessGuard` refuses every write of every member with a 403 `organization_suspended` (GET, HEAD, OPTIONS
+  and a route marked `@AllowedWhenSuspended()`, the preview link, still work); the profile's `organizations` carry `suspended`. Both clear the
+  address memory and tell the website to forget every address (invariant 6). `POST /platform/organizations/:id/owner` (`{ ownerEmail,
+  ownerName?, removeOld? }`: an account makes them owner at once and Administrator on every website; a new email needs a name and leaves the
+  owner until the link is used, when `removeOld` is applied) and `DELETE /platform/organizations/:id` (`{ confirmName }` exactly the name,
+  trimmed, else 400; one transaction deleting every website and then the organisation; 204; then caches and picture files are cleared).
+  **Platform routes** (`PlatformAdminController`, `/platform/...`, a sign-in, no `X-Site-Id`, `@UseGuards(PlatformAdminGuard)`; 401 with
+  no sign-in, 403 for anyone who is not a super admin): `GET /platform/organizations` (`{ items: [{ id, name, status: 'active' | 'suspended' |
+  'awaiting_owner', owner: { id, email, name } | null, pendingOwnerEmail, websites, createdAt }] }`, by name) and `POST /platform/organizations`
+  (`{ name, ownerEmail, ownerName? }`, strict; name trimmed 1 to 100 with no NUL). An email that has an account makes that
+  person the owner at once (`ownerName` is ignored); otherwise `ownerName` is required (400 without) and the organisation is made with no owner plus
+  an `organization_invitations` row, and the answer carries `ownerInvitation: { email, name, token, expiresAt }` **once**: the token is 32 random bytes
+  as base64url, only its SHA-256 is stored, 7 days (the same helpers as site invitations, `invitations.service.ts`). The isolation table
+  (`test/tenant-isolation.e2e-spec.ts`) skips `/platform/...` until T6 brings those routes in; `test/platform-admin-organizations.e2e-spec.ts`
+  covers them meanwhile.
+  **The owner link** (platform-admin T3): the same public routes as a website's invitation. `POST /invitations/lookup` and `/accept` look a secret up
+  among website invitations first, then among owner invitations (`InvitationsService` hands the second to `PlatformAdminService`). The lookup of an
+  owner link answers `{ kind: 'owner', organization: { id, name }, email, name, hasAccount, expiresAt }` (a website's answer has no `kind`); used,
+  replaced, expired, unknown and malformed links are the same 404 as for a website. Accepting is the same form (`token`, `password`, `name`): an email
+  with an account signs in with its password (401 wrong, 409 when a name was sent), a new one needs a name and 12 to 256 characters. One transaction
+  in `PlatformAdminRepository.acceptOwnerInvitation` locks the invitation and the organisation, makes the account, sets `owner_id`, makes the owner
+  Administrator on each website the organisation already has (a lower role is raised), and deletes the invitation; the answer is the sign-in answer.
+  `PlatformAdminService.issueOwnerInvitation` makes a fresh link for an ownerless organisation and replaces the waiting one (T5's change-owner route uses it).
+  The secret helpers (`newToken`, `hashToken`, 7 days) live in `src/invitations/invitation-token.ts`.
 - **Creating a tenant** is `npm run seed -- --organization … --site … --host … --email … --name …`
   (`--host` repeats; the first is primary). The admin's password is only ever `SEED_ADMIN_PASSWORD`
   (12+ characters), never a flag; unset, a new user gets a generated one, printed once, and an
@@ -87,12 +122,13 @@ reach it over REST.
   running API's address memory may answer an old site for up to a minute after `--replace`.
 - **Creating a site from the admin** is `POST /sites` (`name`, `hostnames`, and `organizationId` only when the person
   owns several organisations), and the organisation routes are in `src/organizations/`: `GET /organizations` (the ones
-  they own) and `POST /organizations` (`{ name }`, 201 `{ id, name }`, organizations T2, `../docs/DECISIONS.md` D-056).
+  they own). **Nobody makes an organisation through a route of their own any more**: `POST /organizations` (D-056) was removed by
+  D-062 (a 404 now); the platform's super admin makes them (`POST /platform/organizations`, below), and `npm run seed` / `demo` still do.
   All need a sign-in and no `X-Site-Id`; only an organisation's owner may add a site to it (checked inside the
   transaction), and `createSite` shares its rows with `createTenant`, so a site made here and one made by the seed
-  command are the same. It calls `invalidateSite` (below). **Anyone signed in may create an organisation** (no limit, no
-  unique name; trimmed, 1 to 100 characters, kept as typed, a NUL character is a 400; the body is strict, so an
-  `ownerId` is refused: the caller always owns it). The provisioning desk's three methods are pinned by UC-TS-13.
+  command are the same. It calls `invalidateSite` (below). A website cannot be added to a
+  suspended organisation (403 `organization_suspended`). The provisioning desk's two methods (`createTenant`, `createSite`) are
+  pinned by UC-TS-13.
 - **The company team** is `GET /organizations/:id/team` (`src/organizations/organization-team.service.ts`, organizations T3,
   `../docs/DECISIONS.md` D-054). Nothing is stored for it: it is read from each website's own people through
   `MembersService.list(siteId)` (the scoped members desk: every read carries its `siteId`) and merged by person, so someone
@@ -192,12 +228,12 @@ reach it over REST.
   is fingerprinted before and after in every table that has a `site_id` column (found from the database, so a new tenant table
   is included without anyone remembering). The marking of `ids` and `disposable` is by hand, which is the one thing the test
   cannot check for you.
-  The routes that came with organizations (`POST /organizations`, whose row's owner column is `owner_id`, and `GET /organizations/:id/team`)
-  are in the table too (organizations T5). `test/organization-isolation.e2e-spec.ts` proves what the sweeps cannot: that a person on one
+  `GET /organizations/:id/team` is in the table (organizations T5); the `/platform/...` routes are not: they are a different door (a super
+  admin, not a person on a website), proved by `test/platform-admin-permissions.e2e-spec.ts`, which scans the app for them and fails for
+  a platform route it does not list (UC-PA-26). `test/organization-isolation.e2e-spec.ts` proves what the sweeps cannot: that a person on one
   website of an organization has nothing on its other websites, whatever their role (UC-OR-09), that one organization's owner learns
   nothing of another's and changes nothing of it through the organization routes (UC-OR-10), and that a person on two organizations is
-  on each team with that organization's website and role only (UC-OR-11). A sweep that creates organizations gives its owner several,
-  and then `POST /sites` must name the organization (a 400 otherwise), which the suite's `disposable()` does.
+  on each team with that organization's website and role only (UC-OR-11).
 - **Every route needs a token unless it is marked `@Public()`** (global guard, `src/auth/`). A site-scoped route
   (`@SiteScoped()`, `@RequirePermission(...)`) also needs the `X-Site-Id` header. Permissions are looked up per
   request, not read from the token. `JWT_SECRET` must be set (32+ characters in production); the test configs set

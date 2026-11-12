@@ -269,17 +269,6 @@ const ROUTES: Probe[] = [
     call: () => get('/organizations'),
   },
   {
-    // Whoever is signed in may make one and owns it (organizations T2, D-056).
-    key: 'POST /organizations',
-    kind: 'person',
-    call: () => post('/organizations', { name: `Organization ${uniq()}` }),
-    creates: {
-      table: 'organizations',
-      owner: 'owner_id',
-      idOf: (b) => b.id,
-    },
-  },
-  {
     // Only the organization's owner reads its team (organizations T3, D-054); anyone else is told
     // what is told of an organization that is not there.
     key: 'GET /organizations/:id/team',
@@ -509,6 +498,9 @@ describe('every door is known', () => {
             ) ?? [];
           const kind: Kind = isPublic ? 'open' : siteScoped ? 'site' : 'person';
           for (const base of bases) {
+            // The super admin's routes (`/platform/...`) are checked by
+            // `test/platform-admin-*.e2e-spec.ts`; platform-admin T6 brings them into this table.
+            if (base === 'platform') continue;
             for (const path of paths) {
               const joined =
                 '/' +

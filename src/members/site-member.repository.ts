@@ -20,6 +20,8 @@ export type MemberAccess = {
   roleId: string;
   roleName: string;
   permissions: Permission[];
+  /** The site's organisation is suspended by the platform: the member may look, not change (T4). */
+  organizationSuspended: boolean;
 };
 
 /** A role as the Users screen shows it. */
@@ -91,10 +93,20 @@ export class SiteMemberRepository extends ScopedRepository<SiteMember> {
         'role',
         'role.siteId = member.siteId AND role.id = member.roleId',
       )
+      .innerJoin(Site, 'site', 'site.id = member.siteId')
+      .innerJoin(
+        Organization,
+        'organization',
+        'organization.id = site.organizationId',
+      )
       .select('role.id', 'roleId')
       .addSelect('role.name', 'roleName')
       // `pg` hands an enum array back as the text `{a,b}`; as text[] it arrives as an array.
       .addSelect('"role"."permissions"::text[]', 'permissions')
+      .addSelect(
+        'organization.suspendedAt IS NOT NULL',
+        'organizationSuspended',
+      )
       .where('member.siteId = :siteId', { siteId })
       .andWhere('role.siteId = :siteId', { siteId })
       .andWhere('member.userId = :userId', { userId })
@@ -102,6 +114,7 @@ export class SiteMemberRepository extends ScopedRepository<SiteMember> {
         roleId: string;
         roleName: string;
         permissions: Permission[];
+        organizationSuspended: boolean;
       }>();
 
     return row ?? null;

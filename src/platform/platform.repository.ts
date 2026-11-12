@@ -27,7 +27,7 @@ export type UserMembership = {
   };
   role: { id: string; name: string; permissions: Permission[] };
   /** The site's organisation, for listing the organisations a person belongs to (organizations T1). */
-  organization: { id: string; name: string };
+  organization: { id: string; name: string; suspended: boolean };
   /** Whether the user owns the organisation the site belongs to: who may delete it (D-039). */
   ownsOrganization: boolean;
 };
@@ -71,16 +71,28 @@ export class PlatformRepository {
 
   /**
    * The site that answers on this web address, whether it is the site's primary address or one of
-   * its others, with its whole row (theme and settings included). `null` when none does.
+   * its others, with its whole row (theme and settings included) and whether its organisation is suspended
+   * (platform-admin T4). `null` when none does.
    */
-  async findSiteByHostname(hostname: string): Promise<Site | null> {
-    return this.sites
+  async findSiteByHostname(
+    hostname: string,
+  ): Promise<(Site & { suspended: boolean }) | null> {
+    const { entities, raw } = await this.sites
       .createQueryBuilder('site')
       .innerJoin(Hostname, 'hostname', 'hostname.siteId = site.id')
+      .innerJoin(
+        Organization,
+        'organization',
+        'organization.id = site.organizationId',
+      )
+      .addSelect('organization.suspendedAt IS NOT NULL', 'suspended')
       .where('hostname.hostname = :hostname', {
         hostname: hostname.toLowerCase(),
       })
-      .getOne();
+      .getRawAndEntities<{ suspended: boolean }>();
+    const site = entities[0];
+    if (!site) return null;
+    return Object.assign(site, { suspended: raw[0]?.suspended === true });
   }
 
   /**
@@ -131,6 +143,10 @@ export class PlatformRepository {
       .addSelect('site.name', 'siteName')
       .addSelect('site.organizationId', 'organizationId')
       .addSelect('organization.name', 'organizationName')
+      .addSelect(
+        'organization.suspendedAt IS NOT NULL',
+        'organizationSuspended',
+      )
       .addSelect('hostname.hostname', 'primaryHost')
       .addSelect('site.theme', 'theme')
       .addSelect('role.id', 'roleId')
@@ -153,13 +169,17 @@ export class PlatformRepository {
    */
   async findOrganizationsOwnedBy(
     userId: string,
-  ): Promise<{ id: string; name: string }[]> {
+  ): Promise<{ id: string; name: string; suspended: boolean }[]> {
     if (!isUuid(userId)) return [];
     const rows = await this.organizations.find({
       where: { ownerId: userId },
       order: { name: 'ASC', id: 'ASC' },
     });
-    return rows.map(({ id, name }) => ({ id, name }));
+    return rows.map(({ id, name, suspendedAt }) => ({
+      id,
+      name,
+      suspended: suspendedAt !== null,
+    }));
   }
 }
 
@@ -168,6 +188,7 @@ type MembershipRow = {
   siteName: string;
   organizationId: string;
   organizationName: string;
+  organizationSuspended: boolean;
   primaryHost: string | null;
   theme: Record<string, unknown> | null;
   roleId: string;
@@ -190,7 +211,11 @@ function toMembership(row: MembershipRow): UserMembership {
       name: row.roleName,
       permissions: row.permissions,
     },
-    organization: { id: row.organizationId, name: row.organizationName },
+    organization: {
+      id: row.organizationId,
+      name: row.organizationName,
+      suspended: row.organizationSuspended === true,
+    },
     ownsOrganization: row.ownsOrganization,
   };
 }

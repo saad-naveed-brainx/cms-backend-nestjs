@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
 import { MembersModule } from '../members/members.module.js';
+import { PlatformAdminModule } from '../platform-admin/platform-admin.module.js';
 import { InvitationAcceptanceRepository } from './invitation-acceptance.repository.js';
 import { InvitationsController } from './invitations.controller.js';
 import { InvitationsService } from './invitations.service.js';
@@ -11,7 +12,7 @@ import { InvitationsService } from './invitations.service.js';
  * desk is only here.
  */
 @Module({
-  imports: [AuthModule, MembersModule],
+  imports: [AuthModule, MembersModule, PlatformAdminModule],
   controllers: [InvitationsController],
   providers: [InvitationsService, InvitationAcceptanceRepository],
   exports: [InvitationsService],

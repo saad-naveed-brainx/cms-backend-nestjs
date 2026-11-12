@@ -80,6 +80,7 @@ describe('POST /auth/login', () => {
       id: ayesha.id,
       email: 'ayesha@corrick.test',
       name: 'Ayesha',
+      isPlatformAdmin: false,
     });
     expect(res.body.memberships).toEqual([
       {
@@ -127,6 +128,7 @@ describe('POST /auth/login', () => {
       id: ayesha.id,
       email: 'ayesha@corrick.test',
       name: 'Ayesha',
+      isPlatformAdmin: false,
     });
     expect(res.body.memberships).toEqual([
       {
@@ -235,6 +237,7 @@ describe('POST /auth/login', () => {
       id: chen.id,
       email: 'chen@nowhere.test',
       name: 'Chen',
+      isPlatformAdmin: false,
     });
     expect(asChen.body.memberships).toEqual([]);
     expect(asChen.body.accessToken).toEqual(expect.any(String));

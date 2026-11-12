@@ -78,6 +78,14 @@ export class HostnameTakenError extends Error {
   }
 }
 
+/** The organisation is suspended by the platform (D-062): nothing may be added to it. */
+export class OrganizationSuspendedError extends Error {
+  constructor() {
+    super('This organization is suspended by the platform');
+    this.name = 'OrganizationSuspendedError';
+  }
+}
+
 /** The person does not own the organisation (or owns none), so they may not add a site to it. */
 export class NotOrganizationOwnerError extends Error {
   constructor() {

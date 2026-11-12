@@ -26,4 +26,12 @@ export class User extends TimestampedEntity {
   /** Shown as the author on content and revisions. */
   @Column('text')
   name: string;
+
+  /**
+   * The platform operator (platform-admin, D-062): may create, suspend, delete and hand over
+   * organisations, and nothing inside them. Set from the command line only; read from the database
+   * on every platform request, never from the sign-in token, so revoking it is immediate.
+   */
+  @Column('boolean', { default: false })
+  isPlatformAdmin: boolean;
 }
